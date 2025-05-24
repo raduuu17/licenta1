@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Sign Up - HotelMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Create an Account</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        {{ form.username|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.email|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.password1|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.password2|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.phone_number|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.profile_picture|as_crispy_field }}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Sign Up</button>
+                </form>
+                <div class="mt-3 text-center">
+                    <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

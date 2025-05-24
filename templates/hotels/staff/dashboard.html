@@ -1,0 +1,103 @@
+{% extends 'hotels/staff/base.html' %}
+
+{% block title %}Dashboard - HotelMatch Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Hotels</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ hotels_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-buildings fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Rooms</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ rooms_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-door-open fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Recently Added Hotels</h6>
+                <a href="{% url 'staff_hotel_add' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add New Hotel
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_hotels %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Location</th>
+                                    <th>Rating</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hotel in recent_hotels %}
+                                    <tr>
+                                        <td>{{ hotel.name }}</td>
+                                        <td>{{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}</td>
+                                        <td>{{ hotel.star_rating }} ★</td>
+                                        <td>{{ hotel.created_at|date:"M d, Y" }}</td>
+                                        <td>
+                                            <a href="{% url 'staff_hotel_detail' hotel.id %}" class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'staff_hotel_edit' hotel.id %}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'staff_hotel_delete' hotel.id %}" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No hotels have been added yet.</p>
+                    <div class="text-center">
+                        <a href="{% url 'staff_hotel_add' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Add Your First Hotel
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

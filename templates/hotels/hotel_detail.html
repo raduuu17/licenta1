@@ -1,0 +1,359 @@
+<!-- templates/hotels/hotel_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ hotel.name }} - HotelMatch{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hotel-gallery {
+        position: relative;
+        margin-bottom: 30px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .carousel-item {
+        height: 500px;
+    }
+    
+    .carousel-item img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+    
+    .carousel-caption {
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+        padding: 10px;
+        max-width: 80%;
+        margin: 0 auto;
+    }
+    
+    .hotel-info {
+        position: relative;
+        padding: 20px;
+        margin-bottom: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .hotel-name {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .hotel-rating {
+        font-size: 1.2rem;
+        color: #ffc107;
+        margin-bottom: 10px;
+    }
+    
+    .hotel-location {
+        color: #6c757d;
+        margin-bottom: 20px;
+    }
+    
+    .hotel-description {
+        margin-bottom: 20px;
+    }
+    
+    .hotel-features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .hotel-features .badge {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+    
+    .amenities-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 30px;
+    }
+    
+    .amenity-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+    }
+    
+    .amenity-item i {
+        margin-right: 10px;
+        color: #0d6efd;
+    }
+    
+    .room-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s;
+    }
+    
+    .room-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .room-price {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+    
+    .booking-btn {
+        font-weight: 600;
+    }
+    
+    .capacity-badge {
+        background-color: #6c757d;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        margin-bottom: 10px;
+        display: inline-block;
+    }
+    
+    .thumbnail-gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .thumbnail {
+        width: 80px;
+        height: 60px;
+        border-radius: 5px;
+        cursor: pointer;
+        object-fit: cover;
+        opacity: 0.7;
+        transition: all 0.2s;
+    }
+    
+    .thumbnail:hover, .thumbnail.active {
+        opacity: 1;
+        border: 2px solid #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Hotel Gallery -->
+    {% if images %}
+        <div class="hotel-gallery">
+            <div id="hotelCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    {% for image in images %}
+                        <button type="button" data-bs-target="#hotelCarousel" data-bs-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active" aria-current="true"{% endif %} aria-label="Slide {{ forloop.counter }}"></button>
+                    {% endfor %}
+                </div>
+                <div class="carousel-inner">
+                    {% for image in images %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            <img src="{{ image.image.url }}" class="d-block" alt="{{ image.caption }}">
+                            {% if image.caption %}
+                                <div class="carousel-caption d-none d-md-block">
+                                    <h5>{{ image.caption }}</h5>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#hotelCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#hotelCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+            
+            <!-- Thumbnails -->
+            <div class="thumbnail-gallery">
+                {% for image in images %}
+                    <img src="{{ image.image.url }}" class="thumbnail {% if forloop.first %}active{% endif %}" data-bs-slide-to="{{ forloop.counter0 }}" data-bs-target="#hotelCarousel" alt="{{ image.caption }}">
+                {% endfor %}
+            </div>
+        </div>
+    {% elif hotel.image %}
+        <div class="hotel-gallery">
+            <img src="{{ hotel.image.url }}" alt="{{ hotel.name }}" class="img-fluid rounded">
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Hotel Information -->
+            <div class="hotel-info">
+                <h1 class="hotel-name">{{ hotel.name }}</h1>
+                
+                <div class="hotel-rating">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= hotel.star_rating %}
+                            <i class="bi bi-star-fill"></i>
+                        {% else %}
+                            <i class="bi bi-star"></i>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <div class="hotel-location">
+                    <i class="bi bi-geo-alt-fill"></i> {{ hotel.address }}, {{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}
+                </div>
+                
+                <div class="hotel-features">
+                    {% if hotel.is_pet_friendly %}
+                        <span class="badge bg-info"><i class="bi bi-check-circle-fill me-1"></i> Pet Friendly</span>
+                    {% endif %}
+                    
+                    {% if hotel.is_family_friendly %}
+                        <span class="badge bg-info"><i class="bi bi-check-circle-fill me-1"></i> Family Friendly</span>
+                    {% endif %}
+                </div>
+                
+                <div class="hotel-description">
+                    <h4>About this hotel</h4>
+                    <p>{{ hotel.description }}</p>
+                </div>
+                
+                <!-- Amenities -->
+                <div class="mt-4">
+                    <h4>Amenities</h4>
+                    <div class="amenities-list">
+                        {% for amenity in amenities %}
+                            <div class="amenity-item">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span>{{ amenity.name }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rooms -->
+            <h2 class="mb-4">Available Rooms</h2>
+            
+            {% if rooms %}
+                {% for room in rooms %}
+                    <div class="card room-card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h4 class="card-title">{{ room.name }}</h4>
+                                    <span class="capacity-badge"><i class="bi bi-person-fill"></i> {{ room.capacity }} Guests</span>
+                                    <p class="card-text">{{ room.description }}</p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <p class="room-price">${{ room.price|floatformat:2 }}<small class="text-muted">/night</small></p>
+                                    {% if user.is_authenticated %}
+                                        <a  class="btn btn-primary booking-btn w-100">Book Now</a>
+                                    {% else %}
+                                        <a  class="btn btn-primary booking-btn w-100">Login to Book</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i> No rooms are currently available for this hotel.
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Map Location (placeholder) -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i> Location</h5>
+                </div>
+                <div class="card-body">
+                    <div class="bg-light p-3 rounded" style="height: 300px; display: flex; align-items: center; justify-content: center;">
+                        <div class="text-center">
+                            <i class="bi bi-map" style="font-size: 3rem; color: #6c757d;"></i>
+                            <p class="mt-2 mb-0">{{ hotel.address }}, {{ hotel.city }}</p>
+                            {% if hotel.district %}
+                                <p>{{ hotel.district }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i> Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">If you have any questions about this hotel or need assistance with your booking, our customer service team is here to help.</p>
+                    <div class="d-grid gap-2">
+                        <a href="tel:+15551234567" class="btn btn-outline-primary">
+                            <i class="bi bi-telephone-fill me-2"></i> Call Us
+                        </a>
+                        <a href="mailto:info@hotelmatch.com" class="btn btn-outline-primary">
+                            <i class="bi bi-envelope-fill me-2"></i> Email Support
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make thumbnails interactive
+        const thumbnails = document.querySelectorAll('.thumbnail');
+        thumbnails.forEach(thumb => {
+            thumb.addEventListener('click', function() {
+                // Remove active class from all thumbnails
+                thumbnails.forEach(t => t.classList.remove('active'));
+                
+                // Add active class to the clicked thumbnail
+                this.classList.add('active');
+                
+                // Get the slide index and navigate carousel to it
+                const slideIndex = this.getAttribute('data-bs-slide-to');
+                const carousel = document.getElementById('hotelCarousel');
+                const bsCarousel = new bootstrap.Carousel(carousel);
+                bsCarousel.to(slideIndex);
+            });
+        });
+        
+        // Update thumbnail active state when carousel slides
+        const carousel = document.getElementById('hotelCarousel');
+        if (carousel) {
+            carousel.addEventListener('slid.bs.carousel', function(event) {
+                const slideIndex = event.to;
+                
+                // Remove active class from all thumbnails
+                thumbnails.forEach(t => t.classList.remove('active'));
+                
+                // Add active class to the corresponding thumbnail
+                const activeThumb = document.querySelector(`.thumbnail[data-bs-slide-to="${slideIndex}"]`);
+                if (activeThumb) {
+                    activeThumb.classList.add('active');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

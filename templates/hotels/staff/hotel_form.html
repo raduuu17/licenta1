@@ -1,0 +1,416 @@
+<!-- templates/hotels/staff/hotel_form.html -->
+{% extends 'hotels/staff/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - HotelMatch Staff{% endblock %}
+
+{% block extra_css %}
+<style>
+    .formset {
+        margin-bottom: 2rem;
+    }
+
+    .form-row {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        background-color: #f8f9fa;
+    }
+
+    .empty-form {
+        display: none;
+    }
+
+    .amenity-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .amenity-options {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 576px) {
+        .amenity-options {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if hotel %}
+        <a href="{% url 'staff_hotel_detail' hotel.id %}" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Back to Details
+        </a>
+        {% else %}
+        <a href="{% url 'staff_hotel_list' %}" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Hotel Information</h6>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" action="{{ request.path }}">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        {{ form.name|as_crispy_field }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.description|as_crispy_field }}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.address|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                {{ form.city|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                {{ form.district|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        {{ form.image|as_crispy_field }}
+                        {% if hotel.image %}
+                        <div class="mt-2">
+                            <img src="{{ hotel.image.url }}" alt="{{ hotel.name }}" class="img-thumbnail"
+                                style="max-height: 150px;">
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.star_rating|as_crispy_field }}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_pet_friendly }}
+                            <label class="form-check-label" for="{{ form.is_pet_friendly.id_for_label }}">
+                                Pet Friendly
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_family_friendly }}
+                            <label class="form-check-label" for="{{ form.is_family_friendly.id_for_label }}">
+                                Family Friendly
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Amenities as Checkboxes -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Hotel Amenities</h5>
+                    <p class="text-muted small mb-0">Select all amenities that this hotel offers.</p>
+                </div>
+                <div class="card-body">
+                    <div class="amenity-options">
+                        <div class="form-check">
+                            {{ form.wifi }}
+                            <label class="form-check-label" for="{{ form.wifi.id_for_label }}">
+                                Wi-Fi
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.parking }}
+                            <label class="form-check-label" for="{{ form.parking.id_for_label }}">
+                                Free Parking
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.pool }}
+                            <label class="form-check-label" for="{{ form.pool.id_for_label }}">
+                                Swimming Pool
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.spa }}
+                            <label class="form-check-label" for="{{ form.spa.id_for_label }}">
+                                Spa & Wellness
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.gym }}
+                            <label class="form-check-label" for="{{ form.gym.id_for_label }}">
+                                Fitness Center
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.restaurant }}
+                            <label class="form-check-label" for="{{ form.restaurant.id_for_label }}">
+                                On-site Restaurant
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.room_service }}
+                            <label class="form-check-label" for="{{ form.room_service.id_for_label }}">
+                                Room Service
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.air_conditioning }}
+                            <label class="form-check-label" for="{{ form.air_conditioning.id_for_label }}">
+                                Air Conditioning
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.bar }}
+                            <label class="form-check-label" for="{{ form.bar.id_for_label }}">
+                                Bar/Lounge
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.breakfast }}
+                            <label class="form-check-label" for="{{ form.breakfast.id_for_label }}">
+                                Breakfast Included
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Rooms Formset -->
+            <div class="formset" data-prefix="rooms">
+                <h4>Hotel Rooms</h4>
+                <p class="text-muted">Add rooms available at this hotel.</p>
+
+                {{ room_formset.management_form }}
+                <div class="forms">
+                    {% for room_form in room_formset %}
+                    <div class="form-row">
+                        <div class="row">
+                            {{ room_form.id }}
+                            {% if room_form.instance.pk %}{{ room_form.DELETE }}{% endif %}
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ room_form.name|as_crispy_field }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <div class="mb-3">
+                                    {{ room_form.price|as_crispy_field }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <div class="mb-3">
+                                    {{ room_form.capacity|as_crispy_field }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <div class="mb-3 form-check mt-4">
+                                    {{ room_form.is_available }}
+                                    <label class="form-check-label" for="{{ room_form.is_available.id_for_label }}">
+                                        Available
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-10">
+                                <div class="mb-3">
+                                    {{ room_form.description|as_crispy_field }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-2 d-flex align-items-end justify-content-end">
+                                <button type="button" class="btn btn-danger remove-form">
+                                    <i class="bi bi-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="empty-form d-none">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ room_formset.empty_form.name|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="mb-3">
+                                {{ room_formset.empty_form.price|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="mb-3">
+                                {{ room_formset.empty_form.capacity|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="mb-3 form-check mt-4">
+                                {{ room_formset.empty_form.is_available }}
+                                <label class="form-check-label"
+                                    for="{{ room_formset.empty_form.is_available.id_for_label }}">
+                                    Available
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-10">
+                            <div class="mb-3">
+                                {{ room_formset.empty_form.description|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-2 d-flex align-items-end justify-content-end">
+                            <button type="button" class="btn btn-danger remove-form">
+                                <i class="bi bi-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-success add-form">
+                    <i class="bi bi-plus-circle"></i> Add Another Room
+                </button>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'staff_hotel_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {% if hotel %}Update{% else %}Create{% endif %} Hotel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        // Initialize empty formsets
+        $('#id_rooms-TOTAL_FORMS').val($('.formset[data-prefix="rooms"] .form-row').length);
+
+        // Handle file input for image preview
+        $('#id_image').change(function () {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    if ($('.img-thumbnail').length) {
+                        $('.img-thumbnail').attr('src', e.target.result);
+                    } else {
+                        $('<div class="mt-2"><img src="' + e.target.result + '" class="img-thumbnail" style="max-height: 150px;"></div>').insertAfter('#id_image');
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Remove any existing click handlers to prevent duplication
+        $('.add-form').off('click');
+
+        // Add form set - bind only once
+        $('.add-form').on('click', function (e) {
+            e.preventDefault();
+            console.log("Add form clicked");  // Debug log
+
+            var formset = $(this).closest('.formset');
+            var prefix = formset.data('prefix');
+            var totalForms = $('#id_' + prefix + '-TOTAL_FORMS');
+            var formCount = parseInt(totalForms.val());
+            var newForm = formset.find('.empty-form').clone(true);
+
+            newForm.removeClass('empty-form d-none');
+            newForm.addClass('form-row');
+
+            // Replace __prefix__ with the actual form count
+            newForm.html(newForm.html().replace(/__prefix__/g, formCount));
+
+            formset.find('.forms').append(newForm);
+            totalForms.val(formCount + 1);
+
+            // Re-bind the remove button event for the new form
+            bindRemoveButtonEvents();
+        });
+
+        // Function to bind remove button events
+        function bindRemoveButtonEvents() {
+            $('.remove-form').off('click').on('click', function (e) {
+                e.preventDefault();
+                console.log("Remove button clicked");  // Debug log
+
+                var formRow = $(this).closest('.form-row');
+                var deleteInput = formRow.find('input[type="checkbox"][id$="-DELETE"]');
+
+                if (deleteInput.length) {
+                    // This is an existing form - mark it for deletion
+                    deleteInput.prop('checked', true);
+                    formRow.hide();
+                } else {
+                    // This is a new form - remove it entirely
+                    formRow.remove();
+
+                    // Update the TOTAL_FORMS count
+                    var formset = formRow.closest('.formset');
+                    var prefix = formset.data('prefix');
+                    var totalForms = $('#id_' + prefix + '-TOTAL_FORMS');
+                    var formCount = parseInt(totalForms.val());
+                    totalForms.val(formCount - 1);
+                }
+            });
+        }
+
+        // Initialize the remove button events
+        bindRemoveButtonEvents();
+    });
+</script>
+{% endblock %}

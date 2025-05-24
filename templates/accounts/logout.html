@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Logged Out - HotelMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Logged Out</h4>
+            </div>
+            <div class="card-body text-center">
+                <p class="lead">You have been successfully logged out.</p>
+                <a href="{% url 'login' %}" class="btn btn-primary">Log In Again</a>
+                <a href="{% url 'home' %}" class="btn btn-outline-primary">Return to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

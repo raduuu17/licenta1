@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Set Your Preferences - HotelMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Set Your Hotel Preferences</h4>
+            </div>
+            <div class="card-body">
+                <p class="lead">Help us find the perfect hotels for you by setting your preferences below.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <h5 class="mt-4 mb-3">Amenities</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.wifi|as_crispy_field }}
+                            {{ form.parking|as_crispy_field }}
+                            {{ form.pool|as_crispy_field }}
+                            {{ form.spa|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.gym|as_crispy_field }}
+                            {{ form.restaurant|as_crispy_field }}
+                            {{ form.room_service|as_crispy_field }}
+                            {{ form.air_conditioning|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">Location Preferences</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.preferred_city|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.preferred_district|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">Price Range and Rating</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.min_price|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.max_price|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.min_star_rating|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">Additional Preferences</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.prefer_pet_friendly|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.prefer_family_friendly|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mt-4">Save Preferences</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
