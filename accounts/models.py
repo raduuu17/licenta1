@@ -9,7 +9,16 @@ class User(AbstractUser):
         return self.username
 
 class UserPreference(models.Model):
+    THEME_CHOICES = [
+        ('light', 'Light'),
+        ('dark', 'Dark'),
+        ('system', 'System Default')
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='preferences')
+    # Theme preference
+    theme_preference = models.CharField(max_length=10, choices=THEME_CHOICES, default='light')
+    
     # Preferences that match with HotelAmenity
     wifi = models.BooleanField(default=False)
     parking = models.BooleanField(default=False)

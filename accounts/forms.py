@@ -19,13 +19,14 @@ class CustomUserCreationForm(UserCreationForm):
 class UserPreferenceForm(forms.ModelForm):
     class Meta:
         model = UserPreference
-        exclude = ('user',)
+        exclude = ('user', 'theme_preference')
         widgets = {
             'min_price': forms.NumberInput(attrs={'min': 0, 'step': 10}),
             'max_price': forms.NumberInput(attrs={'min': 0, 'step': 10}),
             'min_star_rating': forms.NumberInput(attrs={'min': 1, 'max': 5, 'step': 1}),
         }
         labels = {
+            'theme_preference': 'Theme Preference',
             'wifi': 'Wi-Fi',
             'parking': 'Free Parking',
             'pool': 'Swimming Pool',

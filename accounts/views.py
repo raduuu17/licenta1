@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, UpdateView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
+from django.http import JsonResponse
 
 from .forms import CustomUserCreationForm, UserPreferenceForm
 from .models import User, UserPreference
@@ -79,3 +80,46 @@ class UpdatePreferencesView(SuccessMessageMixin, UpdateView):
             return self.request.user.preferences
         except UserPreference.DoesNotExist:
             return UserPreference.objects.create(user=self.request.user)
+    
+    def post(self, request, *args, **kwargs):
+        """Override post to explicitly handle the form submission"""
+        self.object = self.get_object()
+        form = self.get_form()
+        
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+    
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        
+        try:
+            self.object = form.save()
+            messages.success(self.request, self.success_message)
+            return redirect(self.success_url)
+        except Exception as e:
+            print(f"Error saving preferences: {str(e)}")
+            messages.error(self.request, f"Error saving preferences: {str(e)}")
+            return self.form_invalid(form)
+    
+    def form_invalid(self, form):
+        print(f"Form validation errors: {form.errors}")
+        messages.error(self.request, "There was an error with your form. Please check the fields below.")
+        return super().form_invalid(form)
+
+@login_required
+def toggle_theme(request):
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        theme = request.POST.get('theme')
+        if theme in ['light', 'dark', 'system']:
+            try:
+                user_pref = request.user.preferences
+            except UserPreference.DoesNotExist:
+                user_pref = UserPreference.objects.create(user=request.user)
+            
+            user_pref.theme_preference = theme
+            user_pref.save()
+            return JsonResponse({'success': True, 'theme': theme})
+        
+    return JsonResponse({'success': False}, status=400)

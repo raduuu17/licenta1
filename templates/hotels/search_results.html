@@ -23,6 +23,13 @@
     </div>
 </div>
 
+<!-- Error message section -->
+{% if error_message %}
+<div class="alert alert-danger" role="alert">
+    {{ error_message }}
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-lg-3 mb-4">
         <!-- Advanced Search Filters -->
@@ -43,12 +50,12 @@
                     
                     <div class="mb-3">
                         <label for="check_in" class="form-label">Check In</label>
-                        <input type="date" id="check_in" name="check_in" class="form-control" value="{{ check_in }}">
+                        <input type="date" id="check_in" name="check_in" class="form-control" value="{{ check_in }}" min="">
                     </div>
                     
                     <div class="mb-3">
                         <label for="check_out" class="form-label">Check Out</label>
-                        <input type="date" id="check_out" name="check_out" class="form-control" value="{{ check_out }}">
+                        <input type="date" id="check_out" name="check_out" class="form-control" value="{{ check_out }}" min="">
                     </div>
                     
                     <div class="mb-3">
@@ -127,4 +134,33 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Date validation script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        const checkInInput = document.getElementById('check_in');
+        const checkOutInput = document.getElementById('check_out');
+        
+        // Set min attributes to today
+        checkInInput.min = today;
+        checkOutInput.min = today;
+        
+        // Make check-out min date change when check-in date changes
+        checkInInput.addEventListener('change', function() {
+            checkOutInput.min = this.value;
+            
+            // If check-out is now earlier than check-in, update it
+            if (checkOutInput.value && checkOutInput.value < this.value) {
+                checkOutInput.value = this.value;
+            }
+        });
+        
+        // If check-in date is already set, ensure check-out min is set properly
+        if (checkInInput.value) {
+            checkOutInput.min = checkInInput.value;
+        }
+    });
+</script>
 {% endblock %}

@@ -33,7 +33,7 @@
                         <select name="star_rating" class="form-select">
                             <option value="">Any Rating</option>
                             {% for i in "12345" %}
-                                <option value="{{ forloop.counter }}" {% if star_rating == forloop.counter|stringformat:"i" %}selected{% endif %}>
+                                <option value="{{ forloop.counter }}" {% if star_rating == forloop.counter or star_rating == forloop.counter|stringformat:"s" %}selected{% endif %}>
                                     {{ forloop.counter }} Star{% if forloop.counter != 1 %}s{% endif %}
                                 </option>
                             {% endfor %}
@@ -43,34 +43,44 @@
                     <div class="mb-3">
                         <label class="form-label">Amenities</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="amenities" value="wifi" id="wifi"
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="wifi" id="wifi"
                                 {% if "wifi" in selected_amenities %}checked{% endif %}>
                             <label class="form-check-label" for="wifi">Wi-Fi</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="amenities" value="parking" id="parking"
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="parking" id="parking"
                                 {% if "parking" in selected_amenities %}checked{% endif %}>
                             <label class="form-check-label" for="parking">Parking</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="amenities" value="pool" id="pool"
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="pool" id="pool"
                                 {% if "pool" in selected_amenities %}checked{% endif %}>
                             <label class="form-check-label" for="pool">Swimming Pool</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="amenities" value="spa" id="spa"
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="spa" id="spa"
                                 {% if "spa" in selected_amenities %}checked{% endif %}>
                             <label class="form-check-label" for="spa">Spa</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="amenities" value="gym" id="gym"
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="gym" id="gym"
                                 {% if "gym" in selected_amenities %}checked{% endif %}>
                             <label class="form-check-label" for="gym">Gym</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="amenities" value="restaurant" id="restaurant"
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="restaurant" id="restaurant"
                                 {% if "restaurant" in selected_amenities %}checked{% endif %}>
                             <label class="form-check-label" for="restaurant">Restaurant</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="air_conditioning" id="air_conditioning"
+                                {% if "air_conditioning" in selected_amenities %}checked{% endif %}>
+                            <label class="form-check-label" for="air_conditioning">Air Conditioning</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="amenities[]" value="room_service" id="room_service"
+                                {% if "room_service" in selected_amenities %}checked{% endif %}>
+                            <label class="form-check-label" for="room_service">Room Service</label>
                         </div>
                     </div>
                     

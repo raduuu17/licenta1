@@ -11,9 +11,26 @@
                 <h4 class="mb-0">Set Your Hotel Preferences</h4>
             </div>
             <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
                 <p class="lead">Help us find the perfect hotels for you by setting your preferences below.</p>
-                <form method="post">
+                
+                <!-- Add explicit form action -->
+                <form method="post" action="{{ request.path }}">
                     {% csrf_token %}
+                    
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <h5>Please correct the following errors:</h5>
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
                     
                     <h5 class="mt-4 mb-3">Amenities</h5>
                     <div class="row">

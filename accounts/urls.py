@@ -10,4 +10,5 @@ urlpatterns = [
     path('profile/edit/', views.UpdateProfileView.as_view(), name='edit_profile'),
     path('preferences/', views.set_preferences, name='set_preferences'),
     path('preferences/edit/', views.UpdatePreferencesView.as_view(), name='edit_preferences'),
+    path('toggle-theme/', views.toggle_theme, name='toggle_theme'),
 ]

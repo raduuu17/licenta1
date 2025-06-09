@@ -3,8 +3,13 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
+from django.db import models
+from datetime import datetime
+from django.http import JsonResponse
+from django.contrib import messages
+from django.db.models import Avg
 
-from .models import Hotel, Room
+from .models import Hotel, Room, Favorite
 from accounts.models import UserPreference
 
 def hotel_list(request):
@@ -20,16 +25,39 @@ def hotel_list(request):
         )
     
     # Filter by star rating if provided
-    star_rating = request.GET.get('star_rating')
+    star_rating = request.GET.get('star_rating', '')
     if star_rating and star_rating.isdigit():
         hotels = hotels.filter(star_rating=int(star_rating))
     
+    hotels = Hotel.objects.all()
     # Filter by amenities if provided
-    amenities = request.GET.getlist('amenities')
-    if amenities:
-        for amenity in amenities:
-            hotels = hotels.filter(amenities__name=amenity)
+    selected_amenities = request.GET.getlist('amenities[]', [])
+    amenity_mapping = {
+        'wifi': ['wifi', 'wi-fi', 'wi fi', 'internet'],
+        'air_conditioning': ['air conditioning', 'ac', 'a/c', 'air con'],
+        'room_service': ['room service'],
+        'gym': ['gym', 'fitness', 'fitness center', 'fitness centre'],
+        'parking': ['parking', 'free parking', 'valet parking'],
+        'pool': ['pool', 'swimming pool', 'indoor pool', 'outdoor pool'],
+        'spa': ['spa', 'wellness', 'massage'],
+        'restaurant': ['restaurant', 'dining', 'on-site restaurant']
+    }
     
+    # Apply amenity filters
+    for amenity in selected_amenities:
+        if amenity in amenity_mapping:
+            # Create a Q object for OR conditions
+            q_objects = Q()
+            for term in amenity_mapping[amenity]:
+                q_objects |= Q(amenities__name__icontains=term)
+            hotels = hotels.filter(q_objects)
+        else:
+            # Fallback for any amenity not in the mapping
+            hotels = hotels.filter(amenities__name__icontains=amenity)
+    
+    # Make sure we don't have duplicates after all the OR conditions
+    hotels = hotels.distinct()
+
     # Paginate results
     paginator = Paginator(hotels, 12)  # Show 12 hotels per page
     page_number = request.GET.get('page')
@@ -39,7 +67,7 @@ def hotel_list(request):
         'page_obj': page_obj,
         'search_query': search_query,
         'star_rating': star_rating,
-        'selected_amenities': amenities,
+        'selected_amenities': selected_amenities,
     }
     
     return render(request, 'hotels/hotel_list.html', context)
@@ -48,14 +76,15 @@ def hotel_detail(request, hotel_id):
     hotel = get_object_or_404(Hotel, id=hotel_id)
     rooms = hotel.rooms.all()
     amenities = hotel.amenities.all()
+
+    avg_rating_result = hotel.reviews.aggregate(avg=Avg('rating'))
+    avg_rating = avg_rating_result['avg'] if avg_rating_result['avg'] is not None else 0
     
-    # Get match score if user is logged in and has preferences
     match_score = None
     if request.user.is_authenticated:
         try:
             user_preferences = request.user.preferences
             
-            # Calculate match score directly (similar to the hotel_recommendations view)
             score = 0
             amenity_names = [amenity.name.lower() for amenity in amenities]
             
@@ -82,8 +111,6 @@ def hotel_detail(request, hotel_id):
             
             if user_preferences.air_conditioning and any(('air conditioning' in name or 'a/c' in name) for name in amenity_names):
                 score += 1
-            
-            # Calculate percentage match
             match_score = int((score / 8) * 100) if score > 0 else 0
             
         except UserPreference.DoesNotExist:
@@ -94,126 +121,41 @@ def hotel_detail(request, hotel_id):
         'rooms': rooms,
         'amenities': amenities,
         'match_score': match_score,
+        'avg_rating': avg_rating
     }
+    
+    if request.user.is_authenticated:
+        is_favorite = Favorite.objects.filter(user=request.user, hotel=hotel).exists()
+        context['is_favorite'] = is_favorite
     
     return render(request, 'hotels/hotel_detail.html', context)
 
 @login_required
 def hotel_recommendations(request):
-    """
-    View function to display hotel recommendations based on user preferences.
-    """
     try:
         user_preferences = request.user.preferences
     except UserPreference.DoesNotExist:
-        # If user has no preferences, redirect to set preferences
         return redirect('set_preferences')
     
-    # Get all hotels - don't filter too much to ensure we have results
     hotels = Hotel.objects.all()
     
-    # Apply only essential filters
     if user_preferences.min_star_rating:
         hotels = hotels.filter(star_rating__gte=user_preferences.min_star_rating)
     
-    # Convert to list for processing
     hotels_list = list(hotels)
     
-    # Print for debugging
     print(f"Found {len(hotels_list)} hotels after filtering")
     
-    # Calculate match score for each hotel
     hotel_matches = []
     for hotel in hotels_list:
-        score = 0
-        max_score = 0  # Track max possible score for each hotel
-        
-        # Get amenities
-        amenities = hotel.amenities.all()
-        amenity_names = [amenity.name.lower() for amenity in amenities]
-        
-        # Check WiFi
-        if user_preferences.wifi:
-            max_score += 1
-            if any('wi-fi' in name for name in amenity_names):
-                score += 1
-        
-        # Check Parking
-        if user_preferences.parking:
-            max_score += 1
-            if any('parking' in name for name in amenity_names):
-                score += 1
-        
-        # Check Pool
-        if user_preferences.pool:
-            max_score += 1
-            if any('pool' in name for name in amenity_names):
-                score += 1
-        
-        # Check Spa
-        if user_preferences.spa:
-            max_score += 1
-            if any('spa' in name for name in amenity_names):
-                score += 1
-        
-        # Check Gym/Fitness
-        if user_preferences.gym:
-            max_score += 1
-            if any(('gym' in name or 'fitness' in name) for name in amenity_names):
-                score += 1
-        
-        # Check Restaurant
-        if user_preferences.restaurant:
-            max_score += 1
-            if any('restaurant' in name for name in amenity_names):
-                score += 1
-        
-        # Check Room Service
-        if user_preferences.room_service:
-            max_score += 1
-            if any('room service' in name for name in amenity_names):
-                score += 1
-        
-        # Check Air Conditioning
-        if user_preferences.air_conditioning:
-            max_score += 1
-            if any(('air conditioning' in name or 'a/c' in name) for name in amenity_names):
-                score += 1
-        
-        # Check Location
-        if user_preferences.preferred_city:
-            max_score += 1
-            if user_preferences.preferred_city.lower() in hotel.city.lower():
-                score += 1
-        
-        # Check Pet-Friendly
-        if user_preferences.prefer_pet_friendly:
-            max_score += 1
-            if hotel.is_pet_friendly:
-                score += 1
-        
-        # Check Family-Friendly
-        if user_preferences.prefer_family_friendly:
-            max_score += 1
-            if hotel.is_family_friendly:
-                score += 1
-        
-        # Calculate percentage match (avoid division by zero)
-        match_score = 0
-        if max_score > 0:
-            match_score = int((score / max_score) * 100)
-        
-        # Add to matches list
+        match_score = hotel.match_score(user_preferences)
         hotel_matches.append((hotel, match_score))
         
-        # Debug info
-        print(f"Hotel: {hotel.name}, Score: {score}/{max_score}, Match: {match_score}%")
+        print(f"Hotel: {hotel.name}, Match: {match_score}%")
     
-    # Sort hotels by match score (highest first)
     hotel_matches.sort(key=lambda x: x[1], reverse=True)
     
-    # Paginate results
-    paginator = Paginator(hotel_matches, 6)  # Show 6 hotels per page
+    paginator = Paginator(hotel_matches, 6) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -229,73 +171,60 @@ def search_hotels(request):
     check_in = request.GET.get('check_in', '')
     check_out = request.GET.get('check_out', '')
     guests = request.GET.get('guests', 1)
+
+    today = datetime.now().date()
+    error_message = None
     
-    # Base queryset
+    if check_in:
+        try:
+            check_in_date = datetime.strptime(check_in, '%Y-%m-%d').date()
+            if check_in_date < today:
+                error_message = "Check-in date cannot be in the past."
+                check_in = today.strftime('%Y-%m-%d') 
+        except ValueError:
+            error_message = "Invalid check-in date format."
+            check_in = ''
+    
+    if check_out:
+        try:
+            check_out_date = datetime.strptime(check_out, '%Y-%m-%d').date()
+            if check_out_date < today:
+                error_message = "Check-out date cannot be in the past."
+                check_out = ''
+            elif check_in and check_out_date < datetime.strptime(check_in, '%Y-%m-%d').date():
+                error_message = "Check-out date must be after check-in date."
+                check_out = ''
+        except ValueError:
+            error_message = "Invalid check-out date format."
+            check_out = ''
+    
     hotels = Hotel.objects.all()
     
-    # Apply filters
     if query:
         hotels = hotels.filter(Q(name__icontains=query) | Q(description__icontains=query))
     
     if city:
         hotels = hotels.filter(city__icontains=city)
     
-    # Filter for room availability (simplified)
     if check_in and check_out and guests:
-        # This is a simplified version - in a real app, you'd check actual availability
         hotels = hotels.filter(rooms__capacity__gte=guests)
+        hotels = hotels.distinct()
     
-    # Convert to list for processing
     hotels_list = list(hotels)
     
-    # Get match scores if user is logged in
     hotel_matches = []
     if request.user.is_authenticated:
         try:
             user_preferences = request.user.preferences
             
-            for hotel in hotels_list:
-                # Calculate match score directly
-                score = 0
-                amenities = hotel.amenities.all()
-                amenity_names = [amenity.name.lower() for amenity in amenities]
-                
-                if user_preferences.wifi and any('wi-fi' in name for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.parking and any('parking' in name for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.pool and any('pool' in name for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.spa and any('spa' in name for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.gym and any(('gym' in name or 'fitness' in name) for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.restaurant and any('restaurant' in name for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.room_service and any('room service' in name for name in amenity_names):
-                    score += 1
-                
-                if user_preferences.air_conditioning and any(('air conditioning' in name or 'a/c' in name) for name in amenity_names):
-                    score += 1
-                
-                # Calculate percentage match
-                match_score = int((score / 8) * 100) if score > 0 else 0
-                hotel_matches.append((hotel, match_score))
+            hotel_matches = [(hotel, hotel.match_score(user_preferences)) for hotel in hotels_list]
             
-            # Sort by match score
             hotel_matches.sort(key=lambda x: x[1], reverse=True)
         except UserPreference.DoesNotExist:
             hotel_matches = [(hotel, None) for hotel in hotels_list]
     else:
         hotel_matches = [(hotel, None) for hotel in hotels_list]
     
-    # Paginate results
     paginator = Paginator(hotel_matches, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -310,3 +239,44 @@ def search_hotels(request):
     }
     
     return render(request, 'hotels/search_results.html', context)
+
+@login_required
+def toggle_favorite(request, hotel_id):
+    hotel = get_object_or_404(Hotel, id=hotel_id)
+    favorite, created = Favorite.objects.get_or_create(user=request.user, hotel=hotel)
+    
+    if not created:
+        favorite.delete()
+        is_favorite = False
+        messages.success(request, f"{hotel.name} removed from favorites")
+    else:
+        is_favorite = True
+        messages.success(request, f"{hotel.name} added to favorites")
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'is_favorite': is_favorite,
+            'hotel_id': hotel_id
+        })
+    
+    return redirect(request.META.get('HTTP_REFERER', 'hotel_list'))
+
+@login_required
+def favorite_list(request):
+    favorites = Favorite.objects.filter(user=request.user).select_related('hotel')
+    
+    hotel_matches = []
+    try:
+        user_preferences = request.user.preferences
+        for favorite in favorites:
+            hotel = favorite.hotel
+            match_score = hotel.match_score(user_preferences)
+            hotel_matches.append((hotel, match_score))
+    except UserPreference.DoesNotExist:
+        hotel_matches = [(favorite.hotel, None) for favorite in favorites]
+    
+    paginator = Paginator(hotel_matches, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'hotels/favorites.html', {'page_obj': page_obj})

@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment - Booking #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="mb-4">
+        <a href="{% url 'booking_detail' booking.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Booking
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Make a Payment</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="mb-4">Booking #{{ booking.id }} - {{ booking.room.hotel.name }}</h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Booking Details</h6>
+                            <p><strong>Room:</strong> {{ booking.room.name }}</p>
+                            <p><strong>Check-in:</strong> {{ booking.check_in_date|date:"M d, Y" }}</p>
+                            <p><strong>Check-out:</strong> {{ booking.check_out_date|date:"M d, Y" }}</p>
+                            <p><strong>Guests:</strong> {{ booking.guests }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Payment Details</h6>
+                            <p><strong>Total Price:</strong> ${{ booking.total_price|floatformat:2 }}</p>
+                            <p><strong>Payment Status:</strong> 
+                                <span class="badge bg-{% if booking.payment_status == 'paid' %}success{% elif booking.payment_status == 'partially_paid' %}warning{% elif booking.payment_status == 'not_paid' %}danger{% else %}info{% endif %}">
+                                    {{ booking.get_payment_status_display }}
+                                </span>
+                            </p>
+                            <p><strong>Amount Due:</strong> ${{ amount_due|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if amount_due > 0 %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Payment Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="amount" name="amount" 
+                                        step="0.01" min="0.01" max="{{ amount_due }}" value="{{ amount_due }}" required>
+                                </div>
+                                <div class="form-text">Maximum payment: ${{ amount_due|floatformat:2 }}</div>
+                            </div>
+                            
+                            <!-- Payment Method Selection (simulated) -->
+                            <div class="mb-3">
+                                <label class="form-label">Payment Method</label>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="card payment-method-card">
+                                            <div class="card-body">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="credit_card" checked>
+                                                    <label class="form-check-label" for="credit_card">
+                                                        <i class="bi bi-credit-card me-2"></i> Credit Card
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="card payment-method-card">
+                                            <div class="card-body">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="payment_method" id="paypal" value="paypal">
+                                                    <label class="form-check-label" for="paypal">
+                                                        <i class="bi bi-paypal me-2"></i> PayPal
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Credit Card Information (simulated) -->
+                            <div id="credit_card_details">
+                                <div class="mb-3">
+                                    <label for="card_number" class="form-label">Card Number</label>
+                                    <input type="text" class="form-control" id="card_number" placeholder="**** **** **** ****" value="4242 4242 4242 4242" readonly>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="expiry" class="form-label">Expiry Date</label>
+                                        <input type="text" class="form-control" id="expiry" placeholder="MM/YY" value="12/25" readonly>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="cvv" class="form-label">CVV</label>
+                                        <input type="text" class="form-control" id="cvv" placeholder="***" value="123" readonly>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="name_on_card" class="form-label">Name on Card</label>
+                                    <input type="text" class="form-control" id="name_on_card" placeholder="Name on Card" value="Demo User" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info mb-4">
+                                <i class="bi bi-info-circle-fill me-2"></i> This is a demonstration payment system. No actual payment will be processed.
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-credit-card-fill me-2"></i> Pay ${{ amount_due|floatformat:2 }}
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill me-2"></i> This booking is fully paid.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Recent Payments</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_payments %}
+                        <div class="list-group">
+                            {% for payment in recent_payments %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                {% if payment.is_refund %}
+                                                    <span class="text-danger">Refund</span>
+                                                {% else %}
+                                                    <span class="text-success">Payment</span>
+                                                {% endif %}
+                                            </h6>
+                                            <small class="text-muted">{{ payment.payment_date|date:"M d, Y H:i" }}</small>
+                                        </div>
+                                        <div>
+                                            <span class="{% if payment.is_refund %}text-danger{% else %}text-success{% endif %}">
+                                                {% if payment.is_refund %}-{% else %}+{% endif %}${{ payment.amount|floatformat:2 }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3 text-center">
+                            <a href="{% url 'payment_history' booking.id %}" class="btn btn-outline-primary btn-sm">View All Payments</a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="bi bi-credit-card" style="font-size: 2rem; color: #6c757d;"></i>
+                            <p class="mt-2 mb-0">No payments have been made yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Payment Policies</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Payment Options</h6>
+                    <ul>
+                        <li>Full payment at time of booking</li>
+                        <li>Partial payment with balance due at check-in</li>
+                    </ul>
+                    
+                    <h6>Cancellation Policy</h6>
+                    <ul>
+                        <li>Free cancellation up to 7 days before check-in</li>
+                        <li>50% refund for cancellations 3-7 days before check-in</li>
+                        <li>No refund for cancellations less than 3 days before check-in</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const creditCardRadio = document.getElementById('credit_card');
+        const paypalRadio = document.getElementById('paypal');
+        const creditCardDetails = document.getElementById('credit_card_details');
+        
+        // Toggle payment details based on selected method
+        creditCardRadio.addEventListener('change', function() {
+            if (this.checked) {
+                creditCardDetails.style.display = 'block';
+            }
+        });
+        
+        paypalRadio.addEventListener('change', function() {
+            if (this.checked) {
+                creditCardDetails.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

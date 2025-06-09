@@ -13,7 +13,6 @@ class HotelForm(forms.ModelForm):
     
     star_rating = forms.ChoiceField(choices=STAR_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
     
-    # Common amenities as checkboxes
     wifi = forms.BooleanField(required=False, label='Wi-Fi', widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
     parking = forms.BooleanField(required=False, label='Free Parking', widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
     pool = forms.BooleanField(required=False, label='Swimming Pool', widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
@@ -39,10 +38,8 @@ class HotelForm(forms.ModelForm):
         hotel = super().save(commit=commit)
         
         if commit:
-            # Clear existing amenities
             hotel.amenities.all().delete()
             
-            # Create amenities based on checkbox selections
             amenities = []
             if self.cleaned_data.get('wifi'):
                 amenities.append(HotelAmenity(hotel=hotel, name='Wi-Fi'))
@@ -65,7 +62,6 @@ class HotelForm(forms.ModelForm):
             if self.cleaned_data.get('breakfast'):
                 amenities.append(HotelAmenity(hotel=hotel, name='Breakfast Included'))
             
-            # Bulk create amenities
             if amenities:
                 HotelAmenity.objects.bulk_create(amenities)
         
@@ -75,7 +71,6 @@ class HotelForm(forms.ModelForm):
         instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
         
-        # If editing an existing hotel, check amenities that exist
         if instance:
             amenity_names = [amenity.name for amenity in instance.amenities.all()]
             self.fields['wifi'].initial = 'Wi-Fi' in amenity_names

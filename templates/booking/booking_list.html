@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bookings - HotelMatch{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">My Bookings</h1>
+    
+    <!-- Status filter -->
+    <div class="mb-4">
+        <div class="btn-group" role="group">
+            <a href="{% url 'booking_list' %}" class="btn btn-outline-primary {% if not current_status %}active{% endif %}">All</a>
+            {% for status_code, status_name in statuses %}
+                <a href="{% url 'booking_list' %}?status={{ status_code }}" class="btn btn-outline-primary {% if current_status == status_code %}active{% endif %}">{{ status_name }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    
+    {% if bookings %}
+        <div class="row">
+            {% for booking in bookings %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% elif booking.status == 'cancelled' %}danger{% elif booking.status == 'checked_in' %}info{% elif booking.status == 'checked_out' %}secondary{% endif %} text-white">
+                            <h5 class="mb-0">{{ booking.get_status_display }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ booking.room.hotel.name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ booking.room.name }}</h6>
+                            
+                            <p class="card-text">
+                                <i class="bi bi-calendar3"></i> 
+                                {{ booking.check_in_date|date:"M d, Y" }} - {{ booking.check_out_date|date:"M d, Y" }}
+                            </p>
+                            
+                            <p class="card-text">
+                                <i class="bi bi-person-fill"></i> {{ booking.guests }} guest{{ booking.guests|pluralize }}
+                            </p>
+                            
+                            <p class="card-text">
+                                <strong>Total price:</strong> ${{ booking.total_price|floatformat:2 }}
+                            </p>
+                            
+                            <p class="card-text">
+                                <strong>Payment status:</strong> 
+                                <span class="badge bg-{% if booking.payment_status == 'paid' %}success{% elif booking.payment_status == 'partially_paid' %}warning{% elif booking.payment_status == 'not_paid' %}danger{% elif booking.payment_status == 'refunded' %}info{% endif %}">
+                                    {{ booking.get_payment_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{% url 'booking_detail' booking.id %}" class="btn btn-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle-fill me-2"></i> You don't have any bookings yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

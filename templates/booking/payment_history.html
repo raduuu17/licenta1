@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment History - Booking #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="mb-4">
+        <a href="{% url 'booking_detail' booking.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Booking
+        </a>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Payment History - Booking #{{ booking.id }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Booking Details</h5>
+                    <p><strong>Hotel:</strong> {{ booking.room.hotel.name }}</p>
+                    <p><strong>Room:</strong> {{ booking.room.name }}</p>
+                    <p><strong>Check-in:</strong> {{ booking.check_in_date|date:"M d, Y" }}</p>
+                    <p><strong>Check-out:</strong> {{ booking.check_out_date|date:"M d, Y" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h5>Payment Summary</h5>
+                    <p><strong>Total Price:</strong> ${{ booking.total_price|floatformat:2 }}</p>
+                    <p><strong>Total Paid:</strong> ${{ total_paid|floatformat:2 }}</p>
+                    <p><strong>Total Refunded:</strong> ${{ total_refunded|floatformat:2 }}</p>
+                    <p><strong>Net Paid:</strong> ${{ net_paid|floatformat:2 }}</p>
+                    <p><strong>Amount Due:</strong> ${{ amount_due|floatformat:2 }}</p>
+                    <p>
+                        <strong>Payment Status:</strong>
+                        <span class="badge bg-{% if booking.payment_status == 'paid' %}success{% elif booking.payment_status == 'partially_paid' %}warning{% elif booking.payment_status == 'not_paid' %}danger{% else %}info{% endif %}">
+                            {{ booking.get_payment_status_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            
+            {% if payments %}
+                <h5 class="mb-3">Payment Transactions</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Transaction ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                                <tr>
+                                    <td>{{ payment.payment_date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ payment.transaction_id }}</td>
+                                    <td>
+                                        {% if payment.is_refund %}
+                                            <span class="text-danger">Refund</span>
+                                        {% else %}
+                                            <span class="text-success">Payment</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="{% if payment.is_refund %}text-danger{% else %}text-success{% endif %}">
+                                        {% if payment.is_refund %}-{% else %}+{% endif %}${{ payment.amount|floatformat:2 }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i> No payment transactions have been recorded for this booking.
+                </div>
+            {% endif %}
+            
+            {% if amount_due > 0 %}
+                <div class="mt-4">
+                    <a href="{% url 'process_payment' booking.id %}" class="btn btn-success">
+                        <i class="bi bi-credit-card-fill me-2"></i> Make a Payment
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

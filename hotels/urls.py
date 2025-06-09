@@ -9,6 +9,8 @@ urlpatterns = [
     path('hotels/<int:hotel_id>/', views.hotel_detail, name='hotel_detail'),
     path('recommendations/', views.hotel_recommendations, name='hotel_recommendations'),
     path('search/', views.search_hotels, name='search_hotels'),
+    path('favorite/toggle/<int:hotel_id>/', views.toggle_favorite, name='toggle_favorite'),
+    path('favorites/', views.favorite_list, name='favorites'),
 
     #staff views
     path('staff/', staff_views.staff_dashboard, name='staff_dashboard'),
