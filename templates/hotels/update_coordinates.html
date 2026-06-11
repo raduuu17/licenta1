@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Update Hotel Coordinates - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map-container {
+        height: 500px;
+        width: 100%;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Update Hotel Coordinates</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Hotel Name</label>
+                            <input type="text" class="form-control" value="{{ hotel.name }}" readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-control" value="{{ hotel.address }}, {{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}" readonly>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_latitude" class="form-label">Latitude</label>
+                                    <input type="text" class="form-control" id="id_latitude" name="latitude" value="{{ hotel.latitude|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_longitude" class="form-label">Longitude</label>
+                                    <input type="text" class="form-control" id="id_longitude" name="longitude" value="{{ hotel.longitude|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Search for address</label>
+                            <div class="input-group">
+                                <input type="text" id="address-search" class="form-control" placeholder="Enter address to locate">
+                                <button type="button" id="search-btn" class="btn btn-primary">Search</button>
+                            </div>
+                            <small class="text-muted">You can also click directly on the map to set the location</small>
+                        </div>
+                        
+                        <div id="map-container"></div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">Save Coordinates</button>
+                            <a href="{% url 'staff_hotel_detail' hotel.id %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the map
+        const map = L.map('map-container').setView([45.9443, 25.0094], 6); // Center on Romania
+        
+        // Add the OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Current marker
+        let marker = null;
+        
+        // Initialize marker if coordinates exist
+        const latField = document.getElementById('id_latitude');
+        const lngField = document.getElementById('id_longitude');
+        
+        if (latField.value && lngField.value) {
+            const lat = parseFloat(latField.value);
+            const lng = parseFloat(lngField.value);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                marker = L.marker([lat, lng]).addTo(map);
+                map.setView([lat, lng], 15);
+            }
+        }
+        
+        // Function to update marker
+        function updateMarker(lat, lng) {
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            
+            marker = L.marker([lat, lng]).addTo(map);
+            map.setView([lat, lng], 15);
+            
+            // Update form fields
+            latField.value = lat.toFixed(6);
+            lngField.value = lng.toFixed(6);
+        }
+        
+        // Handle map clicks
+        map.on('click', function(e) {
+            updateMarker(e.latlng.lat, e.latlng.lng);
+        });
+        
+        // Handle address search
+        document.getElementById('search-btn').addEventListener('click', function() {
+            const address = document.getElementById('address-search').value;
+            
+            if (address) {
+                // Use Nominatim geocoding service
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            const result = data[0];
+                            updateMarker(parseFloat(result.lat), parseFloat(result.lon));
+                        } else {
+                            alert('Address not found. Please try a different search term.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error searching for address:', error);
+                        alert('Error searching for address. Please try again.');
+                    });
+            }
+        });
+        
+        // Allow pressing Enter in the search field
+        document.getElementById('address-search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('search-btn').click();
+            }
+        });
+    });
+</script>
+{% endblock %}

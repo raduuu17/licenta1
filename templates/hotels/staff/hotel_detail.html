@@ -118,10 +118,23 @@
                                 <i class="bi bi-building" style="font-size: 4rem;"></i>
                             </div>
                         {% endif %}
-                    </div>
-                    <div class="col-md-12">
+                    </div>                    <div class="col-md-12">
                         <h4>{{ hotel.name }} <span class="badge bg-primary">{{ hotel.star_rating }} ★</span></h4>
-                        <p><i class="bi bi-geo-alt"></i> {{ hotel.address }}, {{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}</p>
+                        <p>
+                            <i class="bi bi-geo-alt"></i> {{ hotel.address }}, {{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}
+                        </p>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <a href="{% url 'update_coordinates' hotel.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-map"></i> Update Map Coordinates
+                            </a>
+                            
+                            {% if hotel.latitude and hotel.longitude %}
+                            <span class="ms-3 text-muted">
+                                <strong>Coordinates:</strong> {{ hotel.latitude|floatformat:6 }}, {{ hotel.longitude|floatformat:6 }}
+                            </span>
+                            {% endif %}
+                        </div>
                         
                         <div class="mt-2">
                             {% if hotel.is_pet_friendly %}

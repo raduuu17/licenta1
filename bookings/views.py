@@ -5,12 +5,17 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from django.conf import settings
 from datetime import datetime
 from .models import Booking, BookingStatus, Payment, Review, Notification, NotificationType, PaymentStatus
 from .forms import BookingForm, ReviewForm
+from .stripe_service import StripeService
+from .email_service import send_booking_confirmation_email
 from hotels.models import Hotel, Room
 from django.db import models
+import json
 
 @login_required
 def booking_list(request):
@@ -87,8 +92,13 @@ def create_booking(request, room_id):
                 booking.total_price = room.price * nights
                 
                 booking.save()
-                
+
+                # Send confirmation email with the booking details
+                email_sent = send_booking_confirmation_email(booking, request)
+
                 messages.success(request, "Your booking has been created successfully!")
+                if email_sent:
+                    messages.info(request, f"A confirmation email has been sent to {request.user.email}.")
                 return redirect('booking_detail', booking_id=booking.id)
             
             except ValidationError as e:
@@ -191,14 +201,14 @@ def check_room_availability(request):
     
 @login_required
 def process_payment(request, booking_id):
-    """Process a payment for a booking"""
+    """Process a payment for a booking using Stripe"""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     
     # Check if booking is already paid
     if booking.payment_status == 'paid':
         messages.info(request, "This booking is already fully paid.")
         return redirect('booking_detail', booking_id=booking.id)
-    
+
     # Calculate amount due
     total_paid = Payment.objects.filter(booking=booking, is_refund=False).aggregate(
         total=models.Sum('amount')
@@ -210,47 +220,61 @@ def process_payment(request, booking_id):
     
     net_paid = total_paid - total_refunded
     amount_due = booking.total_price - net_paid
-    
+
     if request.method == 'POST':
-        # For demo purposes, we'll just create a payment record without real payment processing
-        # In a real application, you would integrate with a payment gateway here
-        payment_amount = min(float(request.POST.get('amount', 0)), amount_due)
-        
-        if payment_amount <= 0:
-            messages.error(request, "Payment amount must be greater than zero.")
+        try:
+            # Get payment intent ID from the form
+            payment_intent_id = request.POST.get('payment_intent_id')
+            
+            if not payment_intent_id:
+                messages.error(request, "Payment processing failed. Please try again.")
+                return redirect('process_payment', booking_id=booking.id)
+            
+            # Confirm the payment with Stripe
+            payment_data = StripeService.confirm_payment(payment_intent_id)
+            
+            if not payment_data or payment_data['status'] != 'succeeded':
+                messages.error(request, "Payment was not successful. Please try again.")
+                return redirect('process_payment', booking_id=booking.id)
+            
+            # Create the payment record
+            payment = Payment.objects.create(
+                booking=booking,
+                amount=payment_data['amount'],
+                transaction_id=payment_intent_id,
+                stripe_payment_intent_id=payment_intent_id,
+                payment_method='stripe'
+            )
+            
+            # Payment success
+            messages.success(request, f"Payment of ${payment_data['amount']:.2f} has been processed successfully.")
+            
+            # Create notification
+            Notification.objects.create(
+                user=request.user,
+                booking=booking,
+                type=NotificationType.PAYMENT_RECEIVED,
+                message=f"Your payment of ${payment_data['amount']:.2f} for booking #{booking.id} has been received."
+            )
+            
+            # If fully paid, update booking status to confirmed if it was pending
+            status_changed = booking.update_status_after_payment()
+            if status_changed:
+                messages.success(request, "Your booking has been confirmed!")
+            
+            return redirect('booking_detail', booking_id=booking.id)
+            
+        except Exception as e:
+            messages.error(request, f"Payment processing failed: {str(e)}")
             return redirect('process_payment', booking_id=booking.id)
-        
-        # Generate a dummy transaction ID
-        transaction_id = f"DEMO-{booking.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-        
-        # Create the payment record
-        payment = Payment.objects.create(
-            booking=booking,
-            amount=payment_amount,
-            transaction_id=transaction_id
-        )
-        
-        # Payment success
-        messages.success(request, f"Payment of ${payment_amount:.2f} has been processed successfully.")
-        
-        # Create notification
-        Notification.objects.create(
-            user=request.user,
-            booking=booking,
-            type=NotificationType.PAYMENT_RECEIVED,
-            message=f"Your payment of ${payment_amount:.2f} for booking #{booking.id} has been received."
-        )
-        
-        # If fully paid, update booking status to confirmed if it was pending
-        status_changed = booking.update_status_after_payment()
-        if status_changed:
-            messages.success(request, "Your booking has been confirmed!")
-        else:
-            messages.success(request, f"Payment of ${payment_amount:.2f} has been processed successfully.")
-        
+    
+    # For GET requests, create payment intent and show the payment form
+    payment_intent_data = StripeService.create_payment_intent(booking, amount_due)
+    
+    if not payment_intent_data:
+        messages.error(request, "Unable to process payment at this time. Please try again later.")
         return redirect('booking_detail', booking_id=booking.id)
     
-    # For GET requests, show the payment form
     recent_payments = Payment.objects.filter(booking=booking).order_by('-payment_date')[:5]
     
     context = {
@@ -258,6 +282,9 @@ def process_payment(request, booking_id):
         'amount_due': amount_due,
         'recent_payments': recent_payments,
         'payment_history': booking.payments.all().order_by('-payment_date'),
+        'stripe_publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
+        'client_secret': payment_intent_data['client_secret'],
+        'amount_cents': payment_intent_data['amount_cents'],
     }
     return render(request, 'booking/payment_form.html', context)
 
@@ -291,14 +318,14 @@ def payment_history(request, booking_id):
 @login_required
 @require_POST
 def process_refund(request, booking_id):
-    """Process a refund for a cancelled booking"""
+    """Process a refund for a cancelled booking using Stripe"""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     
     # Check if booking is cancelled
     if booking.status != BookingStatus.CANCELLED:
         messages.error(request, "Only cancelled bookings can be refunded.")
         return redirect('booking_detail', booking_id=booking.id)
-    
+
     # Calculate amount paid
     total_paid = Payment.objects.filter(booking=booking, is_refund=False).aggregate(
         total=models.Sum('amount')
@@ -325,34 +352,61 @@ def process_refund(request, booking_id):
         # 50% refund
         refund_percentage = 50
     
-    # For demonstration purposes, we'll apply the refund immediately
-    # In a real application, you would process this through your payment gateway
     if refund_percentage > 0:
         refund_amount = (net_paid * refund_percentage) / 100
-        transaction_id = f"REFUND-{booking.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
         
-        # Create the refund record
-        refund = Payment.objects.create(
-            booking=booking,
-            amount=refund_amount,
-            transaction_id=transaction_id,
-            is_refund=True
-        )
+        # Find the most recent Stripe payment to refund
+        stripe_payment = Payment.objects.filter(
+            booking=booking, 
+            is_refund=False,
+            stripe_payment_intent_id__isnull=False
+        ).order_by('-payment_date').first()
         
-        # Update booking payment status
-        if refund_amount >= net_paid:
-            booking.payment_status = PaymentStatus.REFUNDED
-            booking.save()
-        
-        # Create notification
-        Notification.objects.create(
-            user=request.user,
-            booking=booking,
-            type=NotificationType.PAYMENT_RECEIVED,
-            message=f"Your refund of ${refund_amount:.2f} for booking #{booking.id} has been processed."
-        )
-        
-        messages.success(request, f"Refund of ${refund_amount:.2f} has been processed.")
+        if stripe_payment and stripe_payment.stripe_payment_intent_id:
+            # Process Stripe refund
+            refund_data = StripeService.create_refund(
+                stripe_payment.stripe_payment_intent_id, 
+                refund_amount
+            )
+            
+            if refund_data:
+                # Create the refund record
+                refund = Payment.objects.create(
+                    booking=booking,
+                    amount=refund_amount,
+                    transaction_id=refund_data['id'],
+                    stripe_payment_intent_id=stripe_payment.stripe_payment_intent_id,
+                    is_refund=True,
+                    payment_method='stripe'
+                )
+                
+                # Update booking payment status
+                if refund_amount >= net_paid:
+                    booking.payment_status = PaymentStatus.REFUNDED
+                    booking.save()
+                
+                # Create notification
+                Notification.objects.create(
+                    user=request.user,
+                    booking=booking,
+                    type=NotificationType.PAYMENT_RECEIVED,
+                    message=f"Your refund of ${refund_amount:.2f} for booking #{booking.id} has been processed."
+                )
+                
+                messages.success(request, f"Refund of ${refund_amount:.2f} has been processed through Stripe.")
+            else:
+                messages.error(request, "Refund processing failed. Please contact support.")
+        else:
+            # Fallback for non-Stripe payments (shouldn't happen with new implementation)
+            refund = Payment.objects.create(
+                booking=booking,
+                amount=refund_amount,
+                transaction_id=f"REFUND-{booking.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                is_refund=True,
+                payment_method='manual'
+            )
+            
+            messages.success(request, f"Refund of ${refund_amount:.2f} has been processed manually.")
     else:
         messages.warning(request, "No refund is available according to the cancellation policy.")
     
@@ -469,3 +523,75 @@ def edit_review(request, booking_id):
         'review': review,
     }
     return render(request, 'booking/edit_review.html', context)
+
+@csrf_exempt
+def stripe_webhook(request):
+    """Handle Stripe webhook events"""
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    
+    try:
+        event = StripeService.construct_webhook_event(payload, sig_header)
+        if not event:
+            return JsonResponse({'error': 'Invalid payload'}, status=400)
+        
+        # Handle the event
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            
+            # Find the booking from metadata
+            booking_id = payment_intent['metadata'].get('booking_id')
+            if booking_id:
+                try:
+                    booking = Booking.objects.get(id=booking_id)
+                    
+                    # Check if payment already exists
+                    existing_payment = Payment.objects.filter(
+                        stripe_payment_intent_id=payment_intent['id']
+                    ).first()
+                    
+                    if not existing_payment:
+                        # Create payment record
+                        Payment.objects.create(
+                            booking=booking,
+                            amount=payment_intent['amount'] / 100,  # Convert from cents
+                            transaction_id=payment_intent['id'],
+                            stripe_payment_intent_id=payment_intent['id'],
+                            payment_method='stripe'
+                        )
+                        
+                        # Create notification
+                        Notification.objects.create(
+                            user=booking.user,
+                            booking=booking,
+                            type=NotificationType.PAYMENT_RECEIVED,
+                            message=f"Your payment of ${payment_intent['amount'] / 100:.2f} for booking #{booking.id} has been confirmed."
+                        )
+                
+                except Booking.DoesNotExist:
+                    pass
+        
+        elif event['type'] == 'payment_intent.payment_failed':
+            # Handle failed payment
+            payment_intent = event['data']['object']
+            booking_id = payment_intent['metadata'].get('booking_id')
+            
+            if booking_id:
+                try:
+                    booking = Booking.objects.get(id=booking_id)
+                    
+                    # Create notification about failed payment
+                    Notification.objects.create(
+                        user=booking.user,
+                        booking=booking,
+                        type=NotificationType.CUSTOM,
+                        message=f"Payment failed for booking #{booking.id}. Please try again."
+                    )
+                
+                except Booking.DoesNotExist:
+                    pass
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

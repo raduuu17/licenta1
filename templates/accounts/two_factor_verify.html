@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Two-Factor Verification{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-shield-check"></i> Two-Factor Verification</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted">
+                        Enter the 6-digit code from your authenticator app to continue to the admin.
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                        <div class="mb-3">
+                            <input type="text" name="token" class="form-control form-control-lg text-center"
+                                   placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                                   autofocus required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Verify</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

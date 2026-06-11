@@ -40,78 +40,32 @@
                     </div>
                     
                     {% if amount_due > 0 %}
-                        <form method="post">
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle-fill me-2"></i> 
+                            You will be charged ${{ amount_due|floatformat:2 }} for this booking.
+                        </div>
+                        
+                        <!-- Stripe Payment Form -->
+                        <form id="payment-form" method="post">
                             {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="amount" class="form-label">Payment Amount</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="amount" name="amount" 
-                                        step="0.01" min="0.01" max="{{ amount_due }}" value="{{ amount_due }}" required>
-                                </div>
-                                <div class="form-text">Maximum payment: ${{ amount_due|floatformat:2 }}</div>
-                            </div>
+                            <input type="hidden" id="payment_intent_id" name="payment_intent_id" value="">
                             
-                            <!-- Payment Method Selection (simulated) -->
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <label class="form-label">Payment Method</label>
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <div class="card payment-method-card">
-                                            <div class="card-body">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="credit_card" checked>
-                                                    <label class="form-check-label" for="credit_card">
-                                                        <i class="bi bi-credit-card me-2"></i> Credit Card
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <div class="card payment-method-card">
-                                            <div class="card-body">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="payment_method" id="paypal" value="paypal">
-                                                    <label class="form-check-label" for="paypal">
-                                                        <i class="bi bi-paypal me-2"></i> PayPal
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div id="card-element" class="form-control" style="height: 40px; padding: 10px;">
+                                    <!-- Stripe Elements will create form elements here -->
                                 </div>
-                            </div>
-                            
-                            <!-- Credit Card Information (simulated) -->
-                            <div id="credit_card_details">
-                                <div class="mb-3">
-                                    <label for="card_number" class="form-label">Card Number</label>
-                                    <input type="text" class="form-control" id="card_number" placeholder="**** **** **** ****" value="4242 4242 4242 4242" readonly>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="expiry" class="form-label">Expiry Date</label>
-                                        <input type="text" class="form-control" id="expiry" placeholder="MM/YY" value="12/25" readonly>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="cvv" class="form-label">CVV</label>
-                                        <input type="text" class="form-control" id="cvv" placeholder="***" value="123" readonly>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="name_on_card" class="form-label">Name on Card</label>
-                                    <input type="text" class="form-control" id="name_on_card" placeholder="Name on Card" value="Demo User" readonly>
-                                </div>
-                            </div>
-                            
-                            <div class="alert alert-info mb-4">
-                                <i class="bi bi-info-circle-fill me-2"></i> This is a demonstration payment system. No actual payment will be processed.
+                                <div id="card-errors" role="alert" class="text-danger mt-2"></div>
                             </div>
                             
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-success btn-lg">
-                                    <i class="bi bi-credit-card-fill me-2"></i> Pay ${{ amount_due|floatformat:2 }}
+                                <button type="submit" id="submit-payment" class="btn btn-success btn-lg">
+                                    <span id="button-text">
+                                        <i class="bi bi-credit-card-fill me-2"></i> Pay ${{ amount_due|floatformat:2 }}
+                                    </span>
+                                    <div id="spinner" class="spinner-border spinner-border-sm ms-2" role="status" style="display: none;">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
                                 </button>
                             </div>
                         </form>
@@ -122,8 +76,7 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
-        
+        </div>        
         <div class="col-lg-4">
             <div class="card mb-4">
                 <div class="card-header bg-light">
@@ -168,13 +121,14 @@
             
             <div class="card">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0">Payment Policies</h5>
+                    <h5 class="mb-0">Payment Information</h5>
                 </div>
                 <div class="card-body">
-                    <h6>Payment Options</h6>
+                    <h6>Secure Payment</h6>
                     <ul>
-                        <li>Full payment at time of booking</li>
-                        <li>Partial payment with balance due at check-in</li>
+                        <li>Payments are processed securely by Stripe</li>
+                        <li>Your card information is encrypted and secure</li>
+                        <li>We do not store your payment details</li>
                     </ul>
                     
                     <h6>Cancellation Policy</h6>
@@ -191,24 +145,95 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://js.stripe.com/v3/"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const creditCardRadio = document.getElementById('credit_card');
-        const paypalRadio = document.getElementById('paypal');
-        const creditCardDetails = document.getElementById('credit_card_details');
-        
-        // Toggle payment details based on selected method
-        creditCardRadio.addEventListener('change', function() {
-            if (this.checked) {
-                creditCardDetails.style.display = 'block';
+    const stripe = Stripe('{{ stripe_publishable_key }}');
+    const elements = stripe.elements();
+    
+    // Custom styling for the card element
+    const style = {
+        base: {
+            color: '#32325d',
+            fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+            fontSmoothing: 'antialiased',
+            fontSize: '16px',
+            '::placeholder': {
+                color: '#aab7c4'
             }
-        });
+        },
+        invalid: {
+            color: '#fa755a',
+            iconColor: '#fa755a'
+        }
+    };
+    
+    // Create card element
+    const cardElement = elements.create('card', {style: style});
+    cardElement.mount('#card-element');
+    
+    // Handle real-time validation errors from the card Element
+    cardElement.on('change', function(event) {
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
+    
+    // Handle form submission
+    const form = document.getElementById('payment-form');
+    const submitButton = document.getElementById('submit-payment');
+    const buttonText = document.getElementById('button-text');
+    const spinner = document.getElementById('spinner');
+    
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
         
-        paypalRadio.addEventListener('change', function() {
-            if (this.checked) {
-                creditCardDetails.style.display = 'none';
+        // Disable submit button and show spinner
+        submitButton.disabled = true;
+        buttonText.style.display = 'none';
+        spinner.style.display = 'inline-block';
+        
+        try {
+            const {paymentIntent, error} = await stripe.confirmCardPayment(
+                '{{ client_secret }}',
+                {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: '{{ request.user.get_full_name|default:request.user.username }}',
+                            email: '{{ request.user.email }}'
+                        }
+                    }
+                }
+            );
+            
+            if (error) {
+                // Show error to customer
+                const errorElement = document.getElementById('card-errors');
+                errorElement.textContent = error.message;
+                
+                // Re-enable submit button
+                submitButton.disabled = false;
+                buttonText.style.display = 'inline';
+                spinner.style.display = 'none';
+            } else {
+                // Payment succeeded
+                document.getElementById('payment_intent_id').value = paymentIntent.id;
+                form.submit();
             }
-        });
+        } catch (error) {
+            console.error('Error:', error);
+            
+            // Re-enable submit button
+            submitButton.disabled = false;
+            buttonText.style.display = 'inline';
+            spinner.style.display = 'none';
+            
+            const errorElement = document.getElementById('card-errors');
+            errorElement.textContent = 'An unexpected error occurred. Please try again.';
+        }
     });
 </script>
 {% endblock %}

@@ -1,11 +1,18 @@
+import base64
+import io
+
+import qrcode
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import CreateView, UpdateView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.http import JsonResponse
+from django_otp import login as otp_login
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from .forms import CustomUserCreationForm, UserPreferenceForm
 from .models import User, UserPreference
@@ -107,6 +114,80 @@ class UpdatePreferencesView(SuccessMessageMixin, UpdateView):
         print(f"Form validation errors: {form.errors}")
         messages.error(self.request, "There was an error with your form. Please check the fields below.")
         return super().form_invalid(form)
+
+def _safe_next_url(request, fallback='/admin/'):
+    """Return the ?next= URL if it is safe to redirect to, else the fallback."""
+    next_url = request.GET.get('next') or request.POST.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return next_url
+    return fallback
+
+
+def _qr_code_data_uri(text):
+    """Render a QR code for the given text as a base64 PNG data URI."""
+    image = qrcode.make(text)
+    buffer = io.BytesIO()
+    image.save(buffer, format='PNG')
+    return 'data:image/png;base64,' + base64.b64encode(buffer.getvalue()).decode()
+
+
+@login_required
+def two_factor_setup(request):
+    """Enroll a staff user into 2FA: show a QR code and confirm the first token."""
+    if not request.user.is_staff:
+        messages.error(request, "Two-factor authentication is only available for staff accounts.")
+        return redirect('home')
+
+    # Already enrolled - verify instead of re-enrolling
+    if TOTPDevice.objects.filter(user=request.user, confirmed=True).exists():
+        return redirect('two_factor_verify')
+
+    # Reuse the pending (unconfirmed) device so the QR code stays stable across reloads
+    device, _ = TOTPDevice.objects.get_or_create(
+        user=request.user,
+        confirmed=False,
+        defaults={'name': 'Google Authenticator'},
+    )
+
+    if request.method == 'POST':
+        token = request.POST.get('token', '').strip().replace(' ', '')
+        if device.verify_token(token):
+            device.confirmed = True
+            device.save()
+            otp_login(request, device)
+            messages.success(request, "Two-factor authentication has been enabled for your account.")
+            return redirect(_safe_next_url(request))
+        messages.error(request, "Invalid code. Make sure you scanned the QR code and try again.")
+
+    context = {
+        'qr_code': _qr_code_data_uri(device.config_url),
+        'secret_key': base64.b32encode(device.bin_key).decode(),
+        'next': request.GET.get('next', ''),
+    }
+    return render(request, 'accounts/two_factor_setup.html', context)
+
+
+@login_required
+def two_factor_verify(request):
+    """Ask for the 6-digit code from the authenticator app."""
+    if not request.user.is_staff:
+        messages.error(request, "Two-factor authentication is only available for staff accounts.")
+        return redirect('home')
+
+    devices = list(TOTPDevice.objects.filter(user=request.user, confirmed=True))
+    if not devices:
+        return redirect('two_factor_setup')
+
+    if request.method == 'POST':
+        token = request.POST.get('token', '').strip().replace(' ', '')
+        for device in devices:
+            if device.verify_token(token):
+                otp_login(request, device)
+                return redirect(_safe_next_url(request))
+        messages.error(request, "Invalid or expired code. Please try again.")
+
+    return render(request, 'accounts/two_factor_verify.html', {'next': request.GET.get('next', '')})
+
 
 @login_required
 def toggle_theme(request):

@@ -1,0 +1,113 @@
+{% extends 'hotels/staff/base.html' %}
+
+{% block title %}Import Hotels - HotelMatch Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Import Hotels from OpenStreetMap</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'staff_hotel_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Hotels
+        </a>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Search a city</h6>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            Enter a city name and we will fetch real hotels from the OpenStreetMap database.
+            Each import adds up to 20 <strong>new</strong> hotels &mdash; duplicates (same name and city)
+            are skipped, so importing the same city again continues with the next batch.
+        </p>
+        <form method="post" id="import-form">
+            {% csrf_token %}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label for="city" class="form-label">City</label>
+                    <input type="text" class="form-control" id="city" name="city"
+                           value="{{ city }}" placeholder="e.g. Brasov, Paris, Rome" required>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="create_rooms" name="create_rooms" checked>
+                        <label class="form-check-label" for="create_rooms">
+                            Create default rooms (makes hotels bookable)
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100" id="import-btn">
+                        <i class="bi bi-cloud-download"></i> Fetch &amp; Import
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if results %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-success text-white">
+                <h6 class="m-0 font-weight-bold">Imported ({{ results.imported|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if results.imported %}
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Name</th><th>City</th><th>Stars</th></tr></thead>
+                    <tbody>
+                        {% for hotel in results.imported %}
+                        <tr>
+                            <td>{{ hotel.name }}</td>
+                            <td>{{ hotel.city }}</td>
+                            <td>{{ hotel.star_rating }} <i class="bi bi-star-fill text-warning"></i></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted p-3 mb-0">No new hotels were imported.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-secondary text-white">
+                <h6 class="m-0 font-weight-bold">Skipped - already exist ({{ results.skipped|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if results.skipped %}
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Name</th><th>City</th></tr></thead>
+                    <tbody>
+                        {% for hotel in results.skipped %}
+                        <tr>
+                            <td>{{ hotel.name }}</td>
+                            <td>{{ hotel.city }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted p-3 mb-0">No duplicates found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // The external API can take a few seconds - show a spinner while waiting
+    document.getElementById('import-form').addEventListener('submit', function () {
+        var btn = document.getElementById('import-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing...';
+    });
+</script>
+{% endblock %}

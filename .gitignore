@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Local secrets
+booking_final/local_settings.py
+.env
+
+# Editor / IDE
+*.code-workspace
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# Misc
+*.log

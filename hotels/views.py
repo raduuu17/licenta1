@@ -23,13 +23,11 @@ def hotel_list(request):
             Q(city__icontains=search_query) |
             Q(district__icontains=search_query)
         )
-    
-    # Filter by star rating if provided
+      # Filter by star rating if provided
     star_rating = request.GET.get('star_rating', '')
     if star_rating and star_rating.isdigit():
         hotels = hotels.filter(star_rating=int(star_rating))
     
-    hotels = Hotel.objects.all()
     # Filter by amenities if provided
     selected_amenities = request.GET.getlist('amenities[]', [])
     amenity_mapping = {

@@ -11,4 +11,6 @@ urlpatterns = [
     path('preferences/', views.set_preferences, name='set_preferences'),
     path('preferences/edit/', views.UpdatePreferencesView.as_view(), name='edit_preferences'),
     path('toggle-theme/', views.toggle_theme, name='toggle_theme'),
+    path('2fa/setup/', views.two_factor_setup, name='two_factor_setup'),
+    path('2fa/verify/', views.two_factor_verify, name='two_factor_verify'),
 ]

@@ -11,6 +11,8 @@ class Hotel(models.Model):
     image = models.ImageField(upload_to='hotel_images/', blank=True, null=True)  
     is_pet_friendly = models.BooleanField(default=False)
     is_family_friendly = models.BooleanField(default=False)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

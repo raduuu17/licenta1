@@ -4,6 +4,41 @@
 
 {% block extra_css %}
 <style>
+    #hotel-location-map {
+        height: 300px;
+        width: 100%;
+        border-radius: 8px;
+    }
+    
+    .custom-popup .leaflet-popup-content-wrapper {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+    }
+    
+    .hotel-popup {
+        width: 200px;
+    }
+    
+    .hotel-popup h5 {
+        margin-top: 0;
+        margin-bottom: 5px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .hotel-popup .rating {
+        color: #ffc107;
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+    
+    .hotel-popup .address {
+        color: #666;
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+    
     .hotel-gallery {
         position: relative;
         margin-bottom: 30px;
@@ -219,11 +254,8 @@
                         <i class="bi bi-star"></i>
                         {% endif %}
                         {% endfor %}
-                </div>
-
-                <div class="hotel-location">
-                    <i class="bi bi-geo-alt-fill"></i> {{ hotel.address }}, {{ hotel.city }}{% if hotel.district %}, {{
-                    hotel.district }}{% endif %}
+                </div>                <div class="hotel-location">
+                    <i class="bi bi-geo-alt-fill"></i> {{ hotel.address }}, {{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}
                 </div>
 
                 <div class="hotel-features">
@@ -327,22 +359,30 @@
             {% endif %}
         </div>
 
-        <div class="col-lg-4">
-            <!-- Map Location (placeholder) -->
+        <div class="col-lg-4">            <!-- Map Location -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i> Location</h5>
                 </div>
                 <div class="card-body">
-                    <div class="bg-light p-3 rounded"
-                        style="height: 300px; display: flex; align-items: center; justify-content: center;">
-                        <div class="text-center">
-                            <i class="bi bi-map" style="font-size: 3rem; color: #6c757d;"></i>
-                            <p class="mt-2 mb-0">{{ hotel.address }}, {{ hotel.city }}</p>
-                            {% if hotel.district %}
-                            <p>{{ hotel.district }}</p>
-                            {% endif %}
+                    {% if hotel.latitude and hotel.longitude %}
+                        <div id="hotel-location-map"></div>
+                    {% else %}
+                        <div class="bg-light p-3 rounded"
+                            style="height: 300px; display: flex; align-items: center; justify-content: center;">
+                            <div class="text-center">
+                                <i class="bi bi-map" style="font-size: 3rem; color: #6c757d;"></i>
+                                <p class="mt-2 mb-0">{{ hotel.address }}, {{ hotel.city }}</p>
+                                {% if hotel.district %}
+                                <p>{{ hotel.district }}</p>
+                                {% endif %}
+                                <p class="text-muted mt-2"><small>Map location data not available</small></p>
+                            </div>
                         </div>
+                    {% endif %}
+                    <div class="mt-3">
+                        <p class="mb-0"><i class="bi bi-geo-alt me-2"></i> {{ hotel.address }}</p>
+                        <p class="mb-0">{{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}</p>
                     </div>
                 </div>
             </div>
@@ -436,7 +476,6 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialize the carousel thumbnails
         const carouselThumbnails = document.querySelectorAll('.thumbnail');
         carouselThumbnails.forEach(thumbnail => {
             thumbnail.addEventListener('click', function () {
@@ -445,7 +484,34 @@
             });
         });
 
-        // Favorite button functionality
+        {% if hotel.latitude and hotel.longitude %}
+        const hotelMap = L.map('hotel-location-map').setView([{{ hotel.latitude }}, {{ hotel.longitude }}], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(hotelMap);
+        
+        const popupContent = `
+            <div class="hotel-popup">
+                <h5>{{ hotel.name }}</h5>
+                <div class="rating">
+                    ${'★'.repeat({{ hotel.star_rating }})}${'☆'.repeat(5-{{ hotel.star_rating }})}
+                </div>
+                <div class="address">
+                    <i class="bi bi-geo-alt"></i> {{ hotel.address }}, {{ hotel.city }}
+                    {% if hotel.district %}, {{ hotel.district }}{% endif %}
+                </div>
+            </div>
+        `;
+        
+        L.marker([{{ hotel.latitude }}, {{ hotel.longitude }}])
+            .addTo(hotelMap)
+            .bindPopup(popupContent, {
+                className: 'custom-popup'
+            })
+            .openPopup();
+        {% endif %}
+
         const favoriteBtn = document.querySelector('.favorite-btn');
         if (favoriteBtn) {
             favoriteBtn.addEventListener('click', function (e) {

@@ -199,6 +199,11 @@ class Payment(models.Model):
     transaction_id = models.CharField(max_length=100, blank=True)
     is_refund = models.BooleanField(default=False)
     
+    # Stripe specific fields
+    stripe_payment_intent_id = models.CharField(max_length=100, blank=True, null=True)
+    stripe_charge_id = models.CharField(max_length=100, blank=True, null=True)
+    payment_method = models.CharField(max_length=50, default='stripe')
+    
     def __str__(self):
         transaction_type = "Refund" if self.is_refund else "Payment"
         return f"{transaction_type} of {self.amount} for Booking #{self.booking.id}"

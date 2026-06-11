@@ -6,6 +6,9 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Manage Hotels</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'staff_hotel_import' %}" class="btn btn-sm btn-outline-primary me-2">
+            <i class="bi bi-cloud-download"></i> Import from OpenStreetMap
+        </a>
         <a href="{% url 'staff_hotel_add' %}" class="btn btn-sm btn-primary">
             <i class="bi bi-plus-circle"></i> Add New Hotel
         </a>
@@ -34,16 +37,21 @@
                         {% for hotel in hotels %}
                             <tr>
                                 <td>{{ hotel.name }}</td>
-                                <td>{{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}</td>
+                                <td>{{ hotel.city }}{% if hotel.district %}, {{ hotel.district }}{% endif %}
+                                    {% if hotel.latitude and hotel.longitude %}
+                                    <span class="badge bg-success" title="Has map coordinates"><i class="bi bi-geo-alt-fill"></i></span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ hotel.star_rating }} ★</td>
                                 <td>{{ hotel.rooms.count }}</td>
-                                <td>{{ hotel.created_at|date:"M d, Y" }}</td>
-                                <td>
+                                <td>{{ hotel.created_at|date:"M d, Y" }}</td>                                <td>
                                     <a href="{% url 'staff_hotel_detail' hotel.id %}" class="btn btn-sm btn-info">
                                         <i class="bi bi-eye"></i> View
-                                    </a>
-                                    <a href="{% url 'staff_hotel_edit' hotel.id %}" class="btn btn-sm btn-primary">
+                                    </a>                                    <a href="{% url 'staff_hotel_edit' hotel.id %}" class="btn btn-sm btn-primary">
                                         <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    <a href="{% url 'update_coordinates' hotel.id %}" class="btn btn-sm btn-success" title="Update Map Coordinates">
+                                        <i class="bi bi-map"></i> Map
                                     </a>
                                     <a href="{% url 'staff_hotel_delete' hotel.id %}" class="btn btn-sm btn-danger">
                                         <i class="bi bi-trash"></i> Delete

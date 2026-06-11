@@ -1,0 +1,23 @@
+Hi {{ user.first_name|default:user.username }},
+
+Your booking has been created successfully! Here are the details:
+
+Booking #{{ booking.id }}
+Hotel: {{ hotel.name }} ({{ hotel.star_rating }} stars)
+Address: {{ hotel.address }}, {{ hotel.city }}
+Room: {{ room.name }}
+Check-in: {{ booking.check_in_date|date:"l, d F Y" }}
+Check-out: {{ booking.check_out_date|date:"l, d F Y" }}
+Nights: {{ nights }}
+Guests: {{ booking.guests }}
+Total price: ${{ booking.total_price }}
+Status: {{ booking.get_status_display }}
+Payment status: {{ booking.get_payment_status_display }}
+{% if booking.special_requests %}
+Special requests: {{ booking.special_requests }}
+{% endif %}
+Cancellation policy: {{ booking.get_cancellation_policy }}
+{% if booking_url %}
+View your booking: {{ booking_url }}
+{% endif %}
+Thank you for booking with us!

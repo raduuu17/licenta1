@@ -14,4 +14,7 @@ urlpatterns = [
     path('bookings/<int:booking_id>/payment/', views.process_payment, name='process_payment'),
     path('bookings/<int:booking_id>/payment/history/', views.payment_history, name='payment_history'),
     path('bookings/<int:booking_id>/refund/', views.process_refund, name='process_refund'),
+    
+    # Stripe webhook
+    path('webhooks/stripe/', views.stripe_webhook, name='stripe_webhook'),
 ]

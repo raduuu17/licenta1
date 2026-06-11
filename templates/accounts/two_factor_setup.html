@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Set Up Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-shield-lock"></i> Set Up Two-Factor Authentication</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted">
+                        Admin accounts require two-factor authentication.
+                        Scan this QR code with <strong>Google Authenticator</strong>
+                        (or any TOTP app), then enter the 6-digit code below.
+                    </p>
+
+                    <img src="{{ qr_code }}" alt="QR code for authenticator app" class="img-fluid border rounded mb-3" style="max-width: 240px;">
+
+                    <p class="small text-muted">
+                        Can't scan? Enter this key manually:<br>
+                        <code>{{ secret_key }}</code>
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                        <div class="mb-3">
+                            <input type="text" name="token" class="form-control form-control-lg text-center"
+                                   placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                                   autofocus required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Activate 2FA</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

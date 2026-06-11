@@ -8,6 +8,7 @@ urlpatterns = [
     path('', include('hotels.urls')),  
     path('accounts/', include('accounts.urls')),
     path('bookings/', include('bookings.urls')),
+    path('chatbot/', include('chatbot.urls')),
 ]
 
 if settings.DEBUG:

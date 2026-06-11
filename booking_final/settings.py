@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,10 +43,13 @@ INSTALLED_APPS = [
     'accounts',
     'hotels',
     'bookings',
+    'chatbot',
 
     # Third-party apps
     'crispy_forms',
     'crispy_bootstrap5',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
 ]
 
 MIDDLEWARE = [
@@ -54,6 +58,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
+    'accounts.middleware.AdminTwoFactorMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -151,3 +157,36 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
+
+# AI Chatbot (Anthropic Claude)
+# Set the ANTHROPIC_API_KEY env var to enable the chatbot.
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+
+# Two-factor authentication (django-otp)
+OTP_TOTP_ISSUER = 'Hotel Booking'
+
+# Email Configuration
+# Set the EMAIL_HOST_PASSWORD env var (Gmail App Password) to send real emails.
+# Without it, emails are printed to the console (for development).
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'marzavanradu17@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = f'Hotel Booking <{EMAIL_HOST_USER}>'
+if EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Stripe Configuration
+# The secret key lives in local_settings.py (not committed to git).
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51QDn21KP3YW60CEZh60KZbsLPyVHs99Qx69aQZA7ub7XEck2kzUuTt5Ywfd2b1SpeWZwOc2yVSw1DynBlfmNCH1T00BEFkzNES'
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = ''  # To be set when you create webhooks
+
+# Local overrides (secrets) - file is gitignored
+try:
+    from .local_settings import *  # noqa: F401,F403
+except ImportError:
+    pass
