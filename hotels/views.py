@@ -242,20 +242,26 @@ def search_hotels(request):
 def toggle_favorite(request, hotel_id):
     hotel = get_object_or_404(Hotel, id=hotel_id)
     favorite, created = Favorite.objects.get_or_create(user=request.user, hotel=hotel)
-    
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if not created:
         favorite.delete()
         is_favorite = False
-        messages.success(request, f"{hotel.name} removed from favorites")
     else:
         is_favorite = True
-        messages.success(request, f"{hotel.name} added to favorites")
-    
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+
+    if is_ajax:
+        # The page updates the button itself; queuing a Django message here
+        # would pop up as a stale toast on the next full page load.
         return JsonResponse({
             'is_favorite': is_favorite,
             'hotel_id': hotel_id
         })
+
+    if is_favorite:
+        messages.success(request, f"{hotel.name} added to favorites")
+    else:
+        messages.success(request, f"{hotel.name} removed from favorites")
     
     return redirect(request.META.get('HTTP_REFERER', 'hotel_list'))
 

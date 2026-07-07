@@ -1,64 +1,73 @@
 {% extends 'base.html' %}
 
-{% block title %}My Bookings - HotelMatch{% endblock %}
+{% block title %}My Bookings - Pausa Booking{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="mb-4">My Bookings</h1>
-    
-    <!-- Status filter -->
-    <div class="mb-4">
-        <div class="btn-group" role="group">
-            <a href="{% url 'booking_list' %}" class="btn btn-outline-primary {% if not current_status %}active{% endif %}">All</a>
-            {% for status_code, status_name in statuses %}
-                <a href="{% url 'booking_list' %}?status={{ status_code }}" class="btn btn-outline-primary {% if current_status == status_code %}active{% endif %}">{{ status_name }}</a>
-            {% endfor %}
-        </div>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h1 class="mb-1">My Bookings</h1>
+        <p class="text-muted mb-0">All your stays, past and upcoming.</p>
     </div>
-    
-    {% if bookings %}
-        <div class="row">
-            {% for booking in bookings %}
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% elif booking.status == 'cancelled' %}danger{% elif booking.status == 'checked_in' %}info{% elif booking.status == 'checked_out' %}secondary{% endif %} text-white">
-                            <h5 class="mb-0">{{ booking.get_status_display }}</h5>
+</div>
+
+<!-- Status filter -->
+<div class="filter-pills d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'booking_list' %}" class="btn {% if not current_status %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+    {% for status_code, status_name in statuses %}
+        <a href="{% url 'booking_list' %}?status={{ status_code }}" class="btn {% if current_status == status_code %}btn-primary{% else %}btn-outline-primary{% endif %}">{{ status_name }}</a>
+    {% endfor %}
+</div>
+
+{% if bookings %}
+    <div class="row">
+        {% for booking in bookings %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card hover-lift h-100">
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="status-pill {{ booking.status }}">{{ booking.get_status_display }}</span>
+                            <span class="text-muted" style="font-size: .85rem;">#{{ booking.id }}</span>
                         </div>
-                        <div class="card-body">
-                            <h5 class="card-title">{{ booking.room.hotel.name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ booking.room.name }}</h6>
-                            
-                            <p class="card-text">
-                                <i class="bi bi-calendar3"></i> 
-                                {{ booking.check_in_date|date:"M d, Y" }} - {{ booking.check_out_date|date:"M d, Y" }}
-                            </p>
-                            
-                            <p class="card-text">
-                                <i class="bi bi-person-fill"></i> {{ booking.guests }} guest{{ booking.guests|pluralize }}
-                            </p>
-                            
-                            <p class="card-text">
-                                <strong>Total price:</strong> ${{ booking.total_price|floatformat:2 }}
-                            </p>
-                            
-                            <p class="card-text">
-                                <strong>Payment status:</strong> 
-                                <span class="badge bg-{% if booking.payment_status == 'paid' %}success{% elif booking.payment_status == 'partially_paid' %}warning{% elif booking.payment_status == 'not_paid' %}danger{% elif booking.payment_status == 'refunded' %}info{% endif %}">
+
+                        <h5 class="card-title mb-0">{{ booking.room.hotel.name }}</h5>
+                        <p class="text-muted mb-3">{{ booking.room.name }}</p>
+
+                        <div class="summary-row">
+                            <span class="label"><i class="bi bi-calendar3 me-2"></i>Dates</span>
+                            <span class="value">{{ booking.check_in_date|date:"M d" }} &ndash; {{ booking.check_out_date|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label"><i class="bi bi-person me-2"></i>Guests</span>
+                            <span class="value">{{ booking.guests }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label"><i class="bi bi-credit-card me-2"></i>Payment</span>
+                            <span class="value">
+                                <span class="badge bg-{% if booking.payment_status == 'paid' %}success{% elif booking.payment_status == 'partially_paid' %}warning{% elif booking.payment_status == 'not_paid' %}danger{% else %}info{% endif %}">
                                     {{ booking.get_payment_status_display }}
                                 </span>
-                            </p>
+                            </span>
                         </div>
-                        <div class="card-footer">
-                            <a href="{% url 'booking_detail' booking.id %}" class="btn btn-primary">View Details</a>
+
+                        <div class="summary-total mt-auto">
+                            <span class="label">Total</span>
+                            <span class="total-amount">${{ booking.total_price|floatformat:2 }}</span>
                         </div>
+
+                        <a href="{% url 'booking_detail' booking.id %}" class="btn btn-outline-primary w-100 mt-3">View Details</a>
                     </div>
                 </div>
-            {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-suitcase2" style="font-size: 3rem; color: var(--ink-500);"></i>
+            <h5 class="mt-3">No bookings {% if current_status %}with this status {% endif %}yet</h5>
+            <p class="text-muted mb-4">When you book a stay, it will show up here.</p>
+            <a href="{% url 'home' %}" class="btn btn-primary">Browse Hotels</a>
         </div>
-    {% else %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle-fill me-2"></i> You don't have any bookings yet.
-        </div>
-    {% endif %}
-</div>
+    </div>
+{% endif %}
 {% endblock %}

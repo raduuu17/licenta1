@@ -69,14 +69,14 @@ def create_booking(request, room_id):
     
     if request.method == 'POST':
         data = request.POST.copy()
-        
-        # Check if the form is being submitted with check_in instead of check_in_date
+
+        # The hotel page submits check_in/check_out; the form expects *_date names
         if 'check_in' in data and 'check_in_date' not in data:
             data['check_in_date'] = data['check_in']
-            
+
         if 'check_out' in data and 'check_out_date' not in data:
             data['check_out_date'] = data['check_out']
-        form = BookingForm(request.POST)
+        form = BookingForm(data)
         if form.is_valid():
             try:
                 booking = Booking()
@@ -96,9 +96,10 @@ def create_booking(request, room_id):
                 # Send confirmation email with the booking details
                 email_sent = send_booking_confirmation_email(booking, request)
 
-                messages.success(request, "Your booking has been created successfully!")
                 if email_sent:
-                    messages.info(request, f"A confirmation email has been sent to {request.user.email}.")
+                    messages.success(request, f"Booking created! A confirmation email was sent to {request.user.email}.")
+                else:
+                    messages.success(request, "Your booking has been created successfully!")
                 return redirect('booking_detail', booking_id=booking.id)
             
             except ValidationError as e:
@@ -111,19 +112,25 @@ def create_booking(request, room_id):
             except Exception as e:
                 form.add_error(None, f"An unexpected error occurred: {str(e)}")
     else:
-        # GET request logic stays the same
+        # Pre-fill the form with dates/guests carried over from the hotel page
+        def parse_date(value):
+            try:
+                return datetime.strptime(value, '%Y-%m-%d').date()
+            except (TypeError, ValueError):
+                return None
+
         initial_data = {}
-        check_in = request.GET.get('check_in')
-        check_out = request.GET.get('check_out')
+        check_in = parse_date(request.GET.get('check_in'))
+        check_out = parse_date(request.GET.get('check_out'))
         guests = request.GET.get('guests', 1)
-        
+
         if check_in:
             initial_data['check_in_date'] = check_in
         if check_out:
             initial_data['check_out_date'] = check_out
         if guests:
             initial_data['guests'] = guests
-        
+
         form = BookingForm(initial=initial_data)
     
     context = {
@@ -246,9 +253,6 @@ def process_payment(request, booking_id):
                 payment_method='stripe'
             )
             
-            # Payment success
-            messages.success(request, f"Payment of ${payment_data['amount']:.2f} has been processed successfully.")
-            
             # Create notification
             Notification.objects.create(
                 user=request.user,
@@ -256,11 +260,13 @@ def process_payment(request, booking_id):
                 type=NotificationType.PAYMENT_RECEIVED,
                 message=f"Your payment of ${payment_data['amount']:.2f} for booking #{booking.id} has been received."
             )
-            
+
             # If fully paid, update booking status to confirmed if it was pending
             status_changed = booking.update_status_after_payment()
             if status_changed:
-                messages.success(request, "Your booking has been confirmed!")
+                messages.success(request, f"Payment of ${payment_data['amount']:.2f} received — your booking is confirmed!")
+            else:
+                messages.success(request, f"Payment of ${payment_data['amount']:.2f} has been processed successfully.")
             
             return redirect('booking_detail', booking_id=booking.id)
             

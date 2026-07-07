@@ -24,7 +24,7 @@ MAX_HISTORY_MESSAGES = 12
 def _hotel_context():
     """Compact list of hotels for the system prompt."""
     lines = []
-    for hotel in Hotel.objects.prefetch_related('rooms').all()[:80]:
+    for hotel in Hotel.objects.prefetch_related('rooms', 'amenities').all()[:80]:
         prices = [room.price for room in hotel.rooms.all()]
         price = f"rooms from ${min(prices)}" if prices else "no rooms listed yet"
         flags = []
@@ -35,6 +35,9 @@ def _hotel_context():
         line = f"- {hotel.name} (id={hotel.id}) | {hotel.city} | {hotel.star_rating} stars | {price}"
         if flags:
             line += f" | {', '.join(flags)}"
+        amenities = [a.name for a in hotel.amenities.all()]
+        if amenities:
+            line += f" | amenities: {', '.join(amenities)}"
         lines.append(line)
     return '\n'.join(lines)
 

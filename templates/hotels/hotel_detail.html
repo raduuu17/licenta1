@@ -310,10 +310,9 @@
 
                             <!-- Booking Form Collapse -->
                             <div class="collapse mt-3" id="bookingForm{{ room.id }}">
-                                <div class="card card-body">
-                                    <form method="post" action="{% url 'create_booking' room.id %}"
+                                <div class="card card-body text-start">
+                                    <form data-booking-url="{% url 'create_booking' room.id %}"
                                         id="room-booking-form-{{ room.id }}">
-                                        {% csrf_token %}
                                         <div class="mb-3">
                                             <label for="check_in_{{ room.id }}" class="form-label">Check-in Date</label>
                                             <input type="date" class="form-control check-in-date"
@@ -332,11 +331,10 @@
                                                 name="guests" min="1" max="{{ room.capacity }}" value="1">
                                         </div>
 
-                                        <div class="availability-info" id="availability-info-{{ room.id }}"></div>
+                                        <div class="availability-info" id="availability-info-{{ room.id }}"
+                                            data-room-id="{{ room.id }}" aria-live="polite"></div>
 
-                                        <div class="d-grid gap-2">
-                                            <button type="button" class="btn btn-outline-primary check-availability-btn"
-                                                data-room-id="{{ room.id }}">Check Availability</button>
+                                        <div class="d-grid">
                                             <button type="submit" class="btn btn-success continue-booking-btn"
                                                 disabled>Continue Booking</button>
                                         </div>
@@ -477,12 +475,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const carouselThumbnails = document.querySelectorAll('.thumbnail');
-        carouselThumbnails.forEach(thumbnail => {
-            thumbnail.addEventListener('click', function () {
-                carouselThumbnails.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
 
         {% if hotel.latitude and hotel.longitude %}
         const hotelMap = L.map('hotel-location-map').setView([{{ hotel.latitude }}, {{ hotel.longitude }}], 15);
@@ -585,7 +577,7 @@
                 const slideIndex = event.to;
 
                 // Remove active class from all thumbnails
-                thumbnails.forEach(t => t.classList.remove('active'));
+                carouselThumbnails.forEach(t => t.classList.remove('active'));
 
                 // Add active class to the corresponding thumbnail
                 const activeThumb = document.querySelector(`.thumbnail[data-bs-slide-to="${slideIndex}"]`);
@@ -632,69 +624,66 @@
             input.value = formatDate(tomorrow);
         });
 
-        // Check availability button functionality
-        const checkAvailabilityButtons = document.querySelectorAll('.check-availability-btn');
+        // Availability is checked automatically whenever the dates change
+        const checkAvailability = (roomId) => {
+            const form = document.getElementById(`room-booking-form-${roomId}`);
+            const checkIn = form.querySelector('.check-in-date').value;
+            const checkOut = form.querySelector('.check-out-date').value;
+            const availabilityInfo = document.getElementById(`availability-info-${roomId}`);
+            const continueButton = form.querySelector('.continue-booking-btn');
 
-        checkAvailabilityButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const roomId = this.getAttribute('data-room-id');
-                const form = document.getElementById(`room-booking-form-${roomId}`);
-                const checkIn = form.querySelector('.check-in-date').value;
-                const checkOut = form.querySelector('.check-out-date').value;
-                const availabilityInfo = document.getElementById(`availability-info-${roomId}`);
-                const continueButton = form.querySelector('.continue-booking-btn');
+            if (!checkIn || !checkOut || new Date(checkOut) <= new Date(checkIn)) return;
 
-                // Show loading
-                availabilityInfo.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Checking availability...</p></div>';
+            availabilityInfo.innerHTML = '<div class="text-muted mb-2"><span class="spinner-border spinner-border-sm me-2"></span>Checking availability…</div>';
+            continueButton.disabled = true;
 
-                // Check availability via AJAX
-                fetch(`{% url 'check_availability' %}?room_id=${roomId}&check_in=${checkIn}&check_out=${checkOut}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.available) {
-                            availabilityInfo.innerHTML = `
-                                <div class="alert alert-success mt-3">
-                                    <i class="bi bi-check-circle-fill me-2"></i> Room is available!
-                                    <p class="mb-0 mt-2">Stay duration: ${data.nights} night${data.nights > 1 ? 's' : ''}</p>
-                                    <p class="mb-0"><strong>Total price: $${data.total_price.toFixed(2)}</strong></p>
-                                </div>
-                            `;
-                            continueButton.disabled = false;
-                        } else {
-                            availabilityInfo.innerHTML = `
-                                <div class="alert alert-danger mt-3">
-                                    <i class="bi bi-x-circle-fill me-2"></i> Sorry, this room is not available for the selected dates.
-                                    <p class="mb-0 mt-2">${data.error || 'Please try different dates.'}</p>
-                                </div>
-                            `;
-                            continueButton.disabled = true;
-                        }
-                    })
-                    .catch(error => {
+            fetch(`{% url 'check_availability' %}?room_id=${roomId}&check_in=${checkIn}&check_out=${checkOut}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
                         availabilityInfo.innerHTML = `
-                            <div class="alert alert-danger mt-3">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i> Error checking availability.
-                                <p class="mb-0 mt-2">Please try again later.</p>
+                            <div class="alert alert-success py-2 mb-3">
+                                <i class="bi bi-check-circle-fill me-2"></i>Available — ${data.nights} night${data.nights > 1 ? 's' : ''},
+                                <strong>$${data.total_price.toFixed(2)}</strong> total
                             </div>
                         `;
-                        console.error('Error:', error);
-                    });
+                        continueButton.disabled = false;
+                    } else {
+                        availabilityInfo.innerHTML = `
+                            <div class="alert alert-danger py-2 mb-3">
+                                <i class="bi bi-x-circle-fill me-2"></i>${data.error || 'Not available for these dates. Please try different ones.'}
+                            </div>
+                        `;
+                        continueButton.disabled = true;
+                    }
+                })
+                .catch(() => {
+                    availabilityInfo.innerHTML = '';
+                    continueButton.disabled = false;
+                });
+        };
+
+        // Initial check when a booking widget is opened, re-check on date change
+        document.querySelectorAll('.availability-info').forEach(info => {
+            const roomId = info.dataset.roomId;
+            const collapse = document.getElementById(`bookingForm${roomId}`);
+            const form = document.getElementById(`room-booking-form-${roomId}`);
+
+            collapse.addEventListener('shown.bs.collapse', () => checkAvailability(roomId));
+            form.querySelectorAll('.check-in-date, .check-out-date').forEach(input => {
+                input.addEventListener('change', () => checkAvailability(roomId));
             });
         });
-        document.querySelectorAll('.continue-booking-btn').forEach(button => {
-            button.addEventListener('click', function (e) {
+        // Continue → booking page with the chosen dates carried over as query params
+        document.querySelectorAll('form[data-booking-url]').forEach(form => {
+            form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                const form = this.closest('form');
-
-                // Make sure data is correctly formatted
-                console.log('Form data before submission:', {
+                const params = new URLSearchParams({
                     check_in: form.querySelector('.check-in-date').value,
                     check_out: form.querySelector('.check-out-date').value,
-                    guests: form.querySelector('[name^="guests"]').value
+                    guests: form.querySelector('[name="guests"]').value || '1'
                 });
-
-                // Submit the form
-                form.submit();
+                window.location.href = form.dataset.bookingUrl + '?' + params.toString();
             });
         });
     });

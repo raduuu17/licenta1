@@ -1,147 +1,140 @@
 {% extends 'base.html' %}
 
-{% block title %}Book {{ room.name }} at {{ hotel.name }} - HotelMatch{% endblock %}
+{% block title %}Book {{ room.name }} at {{ hotel.name }} - Pausa Booking{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="mb-4">
-        <a href="{% url 'hotel_detail' room.hotel.id %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Hotel
-        </a>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Book Your Stay</h4>
+<div class="mb-4">
+    <a href="{% url 'hotel_detail' room.hotel.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to {{ hotel.name }}
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body p-4">
+                <p class="text-muted mb-1 text-uppercase" style="font-size: .78rem; letter-spacing: .08em;">Book your stay</p>
+                <h2 class="mb-1">{{ room.name }}</h2>
+                <p class="text-muted mb-4">{{ hotel.name }} &middot; {{ hotel.city }}</p>
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
                 </div>
-                <div class="card-body">
-                    <h3>{{ room.name }} at {{ hotel.name }}</h3>
-                    <p class="text-muted">{{ room.description }}</p>
-                    
-                    {% if form.errors %}
-                        <div class="alert alert-danger">
-                            <h5><i class="bi bi-exclamation-triangle-fill"></i> Please correct the errors below:</h5>
-                            <ul>
-                                {% for field in form %}
-                                    {% for error in field.errors %}
-                                        <li>{{ field.label }}: {{ error }}</li>
-                                    {% endfor %}
-                                {% endfor %}
-                                {% for error in form.non_field_errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
+                {% endif %}
+
+                <form method="post" id="booking-form" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3 {% if form.check_in_date.errors %}field-error{% endif %}">
+                            <label for="{{ form.check_in_date.id_for_label }}" class="form-label">Check-in</label>
+                            {{ form.check_in_date }}
+                            {% for error in form.check_in_date.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
                         </div>
-                    {% endif %}
-                    
-                    <form method="post" id="booking-form">
-                        {% csrf_token %}
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.check_in_date.id_for_label }}" class="form-label">Check-in Date</label>
-                                {{ form.check_in_date }}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.check_out_date.id_for_label }}" class="form-label">Check-out Date</label>
-                                {{ form.check_out_date }}
-                            </div>
+                        <div class="col-md-6 mb-3 {% if form.check_out_date.errors %}field-error{% endif %}">
+                            <label for="{{ form.check_out_date.id_for_label }}" class="form-label">Check-out</label>
+                            {{ form.check_out_date }}
+                            {% for error in form.check_out_date.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.guests.id_for_label }}" class="form-label">Number of Guests</label>
-                            {{ form.guests }}
-                            <div class="form-text">Maximum capacity: {{ room.capacity }} guests</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.special_requests.id_for_label }}" class="form-label">Special Requests (optional)</label>
-                            {{ form.special_requests }}
-                            <div class="form-text">Let us know if you have any special requirements for your stay.</div>
-                        </div>
-                        
-                        <div class="booking-summary card mb-3">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Booking Summary</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p><strong>Room:</strong> {{ room.name }}</p>
-                                        <p><strong>Price per night:</strong> ${{ room.price|floatformat:2 }}</p>
-                                        <p><strong>Guests:</strong> <span id="guest-count">{{ form.initial.guests|default:'1' }}</span></p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <p><strong>Check-in:</strong> <span id="check-in-display">{{ form.initial.check_in_date|date:"M d, Y"|default:"-" }}</span></p>
-                                        <p><strong>Check-out:</strong> <span id="check-out-display">{{ form.initial.check_out_date|date:"M d, Y"|default:"-" }}</span></p>
-                                        <p><strong>Nights:</strong> <span id="nights-count">-</span></p>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5>Total:</h5>
-                                    <h5>$<span id="total-price">-</span></h5>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="button" id="calculate-btn" class="btn btn-outline-primary">Calculate Total</button>
-                            <button type="submit" class="btn btn-success">Confirm Booking</button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+
+                    <div class="mb-3 {% if form.guests.errors %}field-error{% endif %}">
+                        <label for="{{ form.guests.id_for_label }}" class="form-label">Guests</label>
+                        {{ form.guests }}
+                        <div class="form-text">This room sleeps up to {{ room.capacity }} guest{{ room.capacity|pluralize }}.</div>
+                        {% for error in form.guests.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3 {% if form.special_requests.errors %}field-error{% endif %}">
+                        <label for="{{ form.special_requests.id_for_label }}" class="form-label">Special requests <span class="text-muted fw-normal">(optional)</span></label>
+                        {{ form.special_requests }}
+                        {% for error in form.special_requests.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="availability-status" class="mb-3" aria-live="polite"></div>
+
+                    <div class="d-grid">
+                        <button type="submit" id="confirm-btn" class="btn btn-success btn-lg">
+                            <i class="bi bi-check2-circle me-2"></i>Confirm Booking
+                        </button>
+                    </div>
+                    <p class="text-muted text-center mt-2 mb-0" style="font-size: .85rem;">
+                        <i class="bi bi-shield-check me-1"></i>Free cancellation up to 7 days before check-in
+                    </p>
+                </form>
             </div>
         </div>
-        
-        <div class="col-md-4">
+    </div>
+
+    <div class="col-lg-5">
+        <div class="summary-sticky">
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Room Details</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Room Type:</strong> {{ room.name }}</p>
-                    <p><strong>Capacity:</strong> {{ room.capacity }} guests</p>
-                    <p><strong>Price per night:</strong> ${{ room.price|floatformat:2 }}</p>
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Hotel Information</h5>
-                </div>
-                <div class="card-body">
-                    <h5>{{ hotel.name }}</h5>
-                    <p><i class="bi bi-geo-alt-fill"></i> {{ hotel.address }}, {{ hotel.city }}</p>
-                    <div class="mb-2">
-                        {% for i in "12345" %}
-                            {% if forloop.counter <= hotel.star_rating %}
-                                <i class="bi bi-star-fill text-warning"></i>
-                            {% else %}
-                                <i class="bi bi-star text-warning"></i>
-                            {% endif %}
-                        {% endfor %}
+                <div class="card-body p-4">
+                    <h5 class="mb-3">Booking Summary</h5>
+                    <div class="summary-row">
+                        <span class="label">Room</span>
+                        <span class="value">{{ room.name }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Check-in</span>
+                        <span class="value" id="check-in-display">&ndash;</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Check-out</span>
+                        <span class="value" id="check-out-display">&ndash;</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Guests</span>
+                        <span class="value" id="guest-count">1</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Price per night</span>
+                        <span class="value">${{ room.price|floatformat:2 }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Nights</span>
+                        <span class="value" id="nights-count">&ndash;</span>
+                    </div>
+                    <div class="summary-total">
+                        <span class="label">Total</span>
+                        <span class="total-amount">$<span id="total-price">&ndash;</span></span>
                     </div>
                 </div>
             </div>
-            
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Booking Policies</h5>
+
+            <div class="card mb-4">
+                <div class="card-body p-4">
+                    <h6 class="mb-3"><i class="bi bi-building me-2"></i>{{ hotel.name }}</h6>
+                    <p class="text-muted mb-2"><i class="bi bi-geo-alt-fill me-2"></i>{{ hotel.address }}, {{ hotel.city }}</p>
+                    <span class="star-badge">
+                        {% for i in "12345" %}{% if forloop.counter <= hotel.star_rating %}★{% endif %}{% endfor %}
+                        {{ hotel.star_rating }}-star
+                    </span>
                 </div>
-                <div class="card-body">
-                    <h6>Cancellation Policy</h6>
-                    <ul>
+            </div>
+
+            <div class="card">
+                <div class="card-body p-4">
+                    <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Policies</h6>
+                    <ul class="text-muted mb-3 ps-3" style="font-size: .9rem;">
                         <li>Free cancellation up to 7 days before check-in</li>
-                        <li>50% refund for cancellations 3-7 days before check-in</li>
-                        <li>No refund for cancellations less than 3 days before check-in</li>
+                        <li>50% refund 3&ndash;7 days before check-in</li>
+                        <li>No refund less than 3 days before check-in</li>
                     </ul>
-                    
-                    <h6>Check-in/Check-out Times</h6>
-                    <p><strong>Check-in:</strong> 3:00 PM</p>
-                    <p><strong>Check-out:</strong> 11:00 AM</p>
+                    <div class="d-flex justify-content-between text-muted" style="font-size: .9rem;">
+                        <span><strong>Check-in:</strong> 3:00 PM</span>
+                        <span><strong>Check-out:</strong> 11:00 AM</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,110 +149,131 @@
         const checkInInput = form.querySelector('#{{ form.check_in_date.id_for_label }}');
         const checkOutInput = form.querySelector('#{{ form.check_out_date.id_for_label }}');
         const guestsInput = form.querySelector('#{{ form.guests.id_for_label }}');
-        const calculateBtn = document.getElementById('calculate-btn');
-        
+        const confirmBtn = document.getElementById('confirm-btn');
+        const availabilityStatus = document.getElementById('availability-status');
+
         const checkInDisplay = document.getElementById('check-in-display');
         const checkOutDisplay = document.getElementById('check-out-display');
         const guestCount = document.getElementById('guest-count');
         const nightsCount = document.getElementById('nights-count');
         const totalPrice = document.getElementById('total-price');
-        
-        // Set min dates for check-in and check-out
+
+        const roomPrice = parseFloat('{{ room.price }}');
+        const maxGuests = parseInt('{{ room.capacity }}', 10);
+
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        
+
         const formatDate = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         };
-        
+
         const formatDisplayDate = (dateStr) => {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            const options = { month: 'short', day: 'numeric', year: 'numeric' };
-            return date.toLocaleDateString('en-US', options);
+            if (!dateStr) return '–';
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         };
-        
-        // Initialize date inputs
+
+        // Initialize date inputs (keep values carried over from the hotel page)
         checkInInput.min = formatDate(today);
-        if (!checkInInput.value) {
-            checkInInput.value = formatDate(today);
-        }
-        
+        if (!checkInInput.value) checkInInput.value = formatDate(today);
+
         checkOutInput.min = formatDate(tomorrow);
-        if (!checkOutInput.value) {
-            checkOutInput.value = formatDate(tomorrow);
-        }
-        
-        // Update display values initially
-        checkInDisplay.textContent = formatDisplayDate(checkInInput.value);
-        checkOutDisplay.textContent = formatDisplayDate(checkOutInput.value);
-        guestCount.textContent = guestsInput.value;
-        
-        // Calculate nights and total
-        const calculateNightsAndTotal = () => {
+        if (!checkOutInput.value) checkOutInput.value = formatDate(tomorrow);
+
+        guestsInput.max = maxGuests;
+
+        let availabilityTimer = null;
+
+        const updateSummary = () => {
+            checkInDisplay.textContent = formatDisplayDate(checkInInput.value);
+            checkOutDisplay.textContent = formatDisplayDate(checkOutInput.value);
+            guestCount.textContent = guestsInput.value || '1';
+
             if (checkInInput.value && checkOutInput.value) {
                 const checkIn = new Date(checkInInput.value);
                 const checkOut = new Date(checkOutInput.value);
-                
-                // Calculate nights
-                const timeDiff = checkOut.getTime() - checkIn.getTime();
-                const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
-                
+                const nights = Math.round((checkOut - checkIn) / (1000 * 3600 * 24));
+
                 if (nights > 0) {
                     nightsCount.textContent = nights;
-                    
-                    // Calculate total price
-                    const roomPrice = parseFloat('{{ room.price }}');
-                    const total = roomPrice * nights;
-                    totalPrice.textContent = total.toFixed(2);
-                } else {
-                    nightsCount.textContent = '-';
-                    totalPrice.textContent = '-';
+                    totalPrice.textContent = (roomPrice * nights).toFixed(2);
+                    return;
                 }
             }
+            nightsCount.textContent = '–';
+            totalPrice.textContent = '–';
         };
-        
-        // Update check-out min date when check-in changes
+
+        const checkAvailability = () => {
+            if (!checkInInput.value || !checkOutInput.value) return;
+            if (new Date(checkOutInput.value) <= new Date(checkInInput.value)) return;
+
+            availabilityStatus.innerHTML =
+                '<div class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Checking availability…</div>';
+
+            const params = new URLSearchParams({
+                room_id: '{{ room.id }}',
+                check_in: checkInInput.value,
+                check_out: checkOutInput.value
+            });
+
+            fetch(`{% url 'check_availability' %}?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
+                        availabilityStatus.innerHTML =
+                            '<div class="alert alert-success mb-0 py-2"><i class="bi bi-check-circle-fill me-2"></i>Room available for the selected dates.</div>';
+                        confirmBtn.disabled = false;
+                    } else {
+                        availabilityStatus.innerHTML =
+                            '<div class="alert alert-danger mb-0 py-2"><i class="bi bi-x-circle-fill me-2"></i>' +
+                            (data.error || 'This room is not available for the selected dates. Please pick different dates.') +
+                            '</div>';
+                        confirmBtn.disabled = true;
+                    }
+                })
+                .catch(() => {
+                    // Don't block submission on a transient check failure
+                    availabilityStatus.innerHTML = '';
+                    confirmBtn.disabled = false;
+                });
+        };
+
+        const scheduleAvailabilityCheck = () => {
+            clearTimeout(availabilityTimer);
+            availabilityTimer = setTimeout(checkAvailability, 350);
+        };
+
         checkInInput.addEventListener('change', function() {
             const checkInDate = new Date(this.value);
             const nextDay = new Date(checkInDate);
             nextDay.setDate(nextDay.getDate() + 1);
-            
+
             checkOutInput.min = formatDate(nextDay);
             if (new Date(checkOutInput.value) <= checkInDate) {
                 checkOutInput.value = formatDate(nextDay);
-                checkOutDisplay.textContent = formatDisplayDate(checkOutInput.value);
             }
-            
-            checkInDisplay.textContent = formatDisplayDate(this.value);
-            calculateNightsAndTotal();
+            updateSummary();
+            scheduleAvailabilityCheck();
         });
-        
-        // Update display when check-out changes
+
         checkOutInput.addEventListener('change', function() {
-            checkOutDisplay.textContent = formatDisplayDate(this.value);
-            calculateNightsAndTotal();
+            updateSummary();
+            scheduleAvailabilityCheck();
         });
-        
-        // Update display when guests changes
-        guestsInput.addEventListener('change', function() {
-            guestCount.textContent = this.value;
+
+        guestsInput.addEventListener('input', function() {
+            if (parseInt(this.value, 10) > maxGuests) this.value = maxGuests;
+            updateSummary();
         });
-        
-        // Calculate button functionality
-        calculateBtn.addEventListener('click', function() {
-            checkInDisplay.textContent = formatDisplayDate(checkInInput.value);
-            checkOutDisplay.textContent = formatDisplayDate(checkOutInput.value);
-            guestCount.textContent = guestsInput.value;
-            calculateNightsAndTotal();
-        });
-        
-        // Initial calculation
-        calculateNightsAndTotal();
+
+        updateSummary();
+        checkAvailability();
     });
 </script>
 {% endblock %}

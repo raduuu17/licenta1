@@ -1,7 +1,7 @@
 import json
 
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .service import get_chat_reply
 
@@ -45,3 +45,9 @@ def chat_reset(request):
     """Clear the conversation history."""
     request.session[SESSION_KEY] = []
     return JsonResponse({'ok': True})
+
+
+@require_GET
+def chat_history(request):
+    """Return the conversation history so the widget can restore it between pages."""
+    return JsonResponse({'messages': request.session.get(SESSION_KEY, [])})

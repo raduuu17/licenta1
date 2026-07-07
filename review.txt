@@ -1,6 +1,0 @@
--cand fac rezervare sa primesc mail cu detaliile ///// done
--integrare plati stripe ///// done
--integrare chatbot(chatgpt ai) - doar sa raspunda la intrebari basic 
--redis caching - standby
--la autentificare admin sa fie 2fa (mail sau ceva) ///// done cu otp code
--api extern sa imi dea lista de hotele - sa verific daca exista - automat sa imi pun in frontend ///// done

@@ -27,22 +27,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'light';
     }
     
-    // Apply theme to document
+    // Apply theme to document (data-theme for app.css, data-bs-theme for Bootstrap)
     function applyTheme(theme) {
+        let resolved = theme;
         if (theme === 'system') {
-            // Use system preference
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                updateIcons('dark');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                updateIcons('light');
-            }
-        } else {
-            document.documentElement.setAttribute('data-theme', theme);
-            updateIcons(theme);
+            resolved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                ? 'dark' : 'light';
         }
-        
+        document.documentElement.setAttribute('data-theme', resolved);
+        document.documentElement.setAttribute('data-bs-theme', resolved);
+        updateIcons(resolved);
+
         // Store in localStorage for returning visitors
         localStorage.setItem('theme', theme);
     }

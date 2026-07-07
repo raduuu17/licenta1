@@ -135,6 +135,16 @@
         return div;
     }
 
+    // Restore the conversation from the server session (survives page changes)
+    fetch('/chatbot/history/')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            (data.messages || []).forEach(function (m) {
+                addMessage(m.content, m.role === 'user' ? 'user' : 'bot');
+            });
+        })
+        .catch(function () { /* istoricul e doar cosmetic - ignoram erorile */ });
+
     toggle.addEventListener('click', function () {
         panel.classList.toggle('open');
         if (panel.classList.contains('open')) input.focus();

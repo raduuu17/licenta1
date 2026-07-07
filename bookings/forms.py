@@ -3,15 +3,14 @@ from .models import Booking, Review
 
 class DateInput(forms.DateInput):
     input_type = 'date'
-    attrs = {'class': 'form-control'}
 
 class BookingForm(forms.ModelForm):
     class Meta:
         model = Booking
         fields = ['check_in_date', 'check_out_date', 'guests', 'special_requests']
         widgets = {
-            'check_in_date': DateInput(),
-            'check_out_date': DateInput(),
+            'check_in_date': DateInput(attrs={'class': 'form-control'}),
+            'check_out_date': DateInput(attrs={'class': 'form-control'}),
             'guests': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'special_requests': forms.Textarea(attrs={'class': 'form-control', 'rows': '3'}),
         }
